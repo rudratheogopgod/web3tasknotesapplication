@@ -1,0 +1,28 @@
+# Android Studio and local machine settings
+*.iml
+.idea/
+local.properties
+.DS_Store
+Thumbs.db
+
+# Gradle and generated build output
+.gradle/
+.kotlin/
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local build specification, not part of the repository
+/docs/SRS.md
+
+# Signing material
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# Keep deliverable APKs only in release/
+*.apk
+!/release/*.apk
+*.aab
