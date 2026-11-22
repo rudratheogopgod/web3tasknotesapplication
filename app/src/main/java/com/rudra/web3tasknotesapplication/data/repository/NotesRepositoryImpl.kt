@@ -1,0 +1,60 @@
+package com.rudra.web3tasknotesapplication.data.repository
+
+import android.content.Context
+import androidx.room.withTransaction
+import com.rudra.web3tasknotesapplication.R
+import com.rudra.web3tasknotesapplication.core.dispatchers.DispatcherProvider
+import com.rudra.web3tasknotesapplication.core.time.TimeProvider
+import com.rudra.web3tasknotesapplication.data.local.NotesDatabase
+import com.rudra.web3tasknotesapplication.data.mapper.toEntity
+import com.rudra.web3tasknotesapplication.data.mapper.toNote
+import com.rudra.web3tasknotesapplication.domain.model.Note
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+
+/** Runs each read-and-write save in one transaction so comparisons use the latest row. */
+class NotesRepositoryImpl(
+    private val database: NotesDatabase,
+    private val dispatchers: DispatcherProvider,
+    time: TimeProvider,
+    context: Context,
+) : NotesRepository {
+    private val dao = database.noteDao()
+    private val appContext = context.applicationContext
+    private val rules = NoteSaveRules(time) { appContext.getString(R.string.untitled_note) }
+
+    override fun observeAll() = dao.observeAll().map { rows -> rows.map { it.toNote() } }
+
+    override fun observeById(id: Long) = dao.observeById(id).map { it?.toNote() }
+
+    override suspend fun save(id: Long?, title: String, content: String): Result<Note> = write {
+        database.withTransaction {
+            val existing = id?.let { checkNotNull(dao.getById(it)).toNote() }
+            val note = rules.prepare(existing, title, content)
+            when {
+                existing == null -> note.copy(id = dao.insert(note.toEntity()))
+                note === existing -> existing
+                else -> {
+                    check(dao.update(note.toEntity()) == 1)
+                    note
+                }
+            }
+        }
+    }
+
+    override suspend fun delete(note: Note): Result<Unit> = write {
+        check(dao.delete(note.toEntity()) == 1)
+    }
+
+    private suspend fun <T> write(operation: suspend () -> T): Result<T> =
+        withContext(dispatchers.io()) {
+            try {
+                Result.success(operation())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                Result.failure(failure)
+            }
+        }
+}
