@@ -2,6 +2,7 @@ package com.rudra.web3tasknotesapplication.ui.notes.list
 
 import com.rudra.web3tasknotesapplication.data.repository.NotesRepository
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -111,7 +112,7 @@ class NotesListViewModelTest {
         }
         override fun observeCreated(limit: Int) = error("Creation order is not used by this test")
         override fun observeById(id: Long) = error("Only list observation is used")
-        override suspend fun save(id: Long?, title: String, content: String): Result<Note> =
+        override suspend fun save(id: Long?, title: String, content: String, options: NoteOptions?): Result<Note> =
             error("Only list observation is used")
         override suspend fun delete(id: Long): Result<Note> {
             deleteCalls++

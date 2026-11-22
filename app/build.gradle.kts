@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     ksp(libs.androidx.room.compiler)
     androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.room.testing)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

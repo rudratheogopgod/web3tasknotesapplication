@@ -14,7 +14,7 @@ private fun NoteEditorPreview() {
         NoteEditorScreen(
             state = NoteEditorUiState(isNewNote = false, title = "Weekend plans",
                 content = "Visit the bookshop", updatedAt = 0),
-            onTitleChange = {}, onContentChange = {}, onBack = {},
+            onTitleChange = {}, onContentChange = {}, onBack = {}, onOptionsChange = {},
             onSave = {}, onDiscard = {}, onKeepEditing = {},
         )
     }

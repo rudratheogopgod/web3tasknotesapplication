@@ -41,4 +41,15 @@
     <string name="notes_search_suggestion">Try a different search or clear the field.</string>
     <string name="recently_added">Recently added</string>
     <string name="see_all_recent">See all</string>
+    <string name="pin_note">Pin note</string>
+    <string name="unpin_note">Unpin note</string>
+    <string name="category_quick_notes">Quick notes</string>
+    <string name="category_todo">To-do list</string>
+    <string name="category_journal">Journal</string>
+    <string name="note_color_default">Default color</string>
+    <string name="note_color_rose">Rose</string>
+    <string name="note_color_peach">Peach</string>
+    <string name="note_color_sand">Sand</string>
+    <string name="note_color_mint">Mint</string>
+    <string name="note_color_lavender">Lavender</string>
 </resources>

@@ -12,6 +12,7 @@ import com.rudra.web3tasknotesapplication.data.local.NotesDatabase
 import com.rudra.web3tasknotesapplication.data.mapper.toEntity
 import com.rudra.web3tasknotesapplication.data.mapper.toNote
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -42,10 +43,15 @@ class NotesRepositoryImpl @Inject constructor(
 
     override fun observeById(id: Long) = dao.observeById(id).map { it?.toNote() }
 
-    override suspend fun save(id: Long?, title: String, content: String): Result<Note> = write {
+    override suspend fun save(
+        id: Long?,
+        title: String,
+        content: String,
+        options: NoteOptions?,
+    ): Result<Note> = write {
         database.withTransaction {
             val existing = id?.let { checkNotNull(dao.getById(it)).toNote() }
-            val note = rules.prepare(existing, title, content)
+            val note = rules.prepare(existing, title, content, options)
             when {
                 existing == null -> note.copy(id = dao.insert(note.toEntity()))
                 note === existing -> existing
@@ -67,7 +73,6 @@ class NotesRepositoryImpl @Inject constructor(
 
     override suspend fun restore(note: Note): Result<Unit> = write {
         dao.insert(note.toEntity())
-        Unit
     }
 
     private suspend fun <T> write(operation: suspend () -> T): Result<T> =

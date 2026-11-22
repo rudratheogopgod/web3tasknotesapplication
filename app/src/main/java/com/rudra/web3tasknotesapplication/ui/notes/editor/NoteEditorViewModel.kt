@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.web3tasknotesapplication.data.repository.BlankNoteException
 import com.rudra.web3tasknotesapplication.data.repository.NotesRepository
+import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
+import com.rudra.web3tasknotesapplication.domain.model.NoteColor
+import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.ui.navigation.EDITOR_NOTE_ID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,10 +29,12 @@ internal class NoteEditorViewModel @Inject constructor(
     val noteId = savedState.get<Long>(EDITOR_NOTE_ID)
     private var originalTitle = ""
     private var originalContent = ""
+    private var originalOptions = NoteOptions()
     private val mutableState = MutableStateFlow(NoteEditorUiState(
         isNewNote = noteId == null,
         title = savedState[TITLE] ?: "",
         content = savedState[CONTENT] ?: "",
+        options = restoreOptions(originalOptions),
         isLoading = noteId != null,
     ))
     val state = mutableState.asStateFlow()
@@ -59,27 +64,44 @@ internal class NoteEditorViewModel @Inject constructor(
         }
         originalTitle = note.title
         originalContent = note.content
+        originalOptions = note.options
         val title = savedState[TITLE] ?: note.title
         val content = savedState[CONTENT] ?: note.content
+        val options = restoreOptions(originalOptions)
         mutableState.update { it.copy(
             title = title, content = content, updatedAt = note.updatedAt, isLoading = false,
-            hasUnsavedChanges = title != originalTitle || content != originalContent,
+            options = options,
+            hasUnsavedChanges = isChanged(title, content, options),
         ) }
     }
 
     fun changeTitle(title: String) = updateDraft(title, state.value.content)
     fun changeContent(content: String) = updateDraft(state.value.title, content)
 
-    private fun updateDraft(title: String, content: String) {
+    fun changeOptions(options: NoteOptions) = updateDraft(state.value.title, state.value.content, options)
+
+    private fun updateDraft(title: String, content: String, options: NoteOptions = state.value.options) {
         val current = state.value
         if (current.isSaving || current.isLoading || current.error == EditorError.LOAD_FAILED) return
         savedState[TITLE] = title
         savedState[CONTENT] = content
+        savedState[PINNED] = options.isPinned
+        savedState[COLOR] = options.colorId.name
+        savedState[CATEGORY] = options.category.name
         mutableState.update {
-            it.copy(title = title, content = content, error = null,
-                hasUnsavedChanges = title != originalTitle || content != originalContent)
+            it.copy(title = title, content = content, options = options, error = null,
+                hasUnsavedChanges = isChanged(title, content, options))
         }
     }
+
+    private fun isChanged(title: String, content: String, options: NoteOptions): Boolean =
+        title != originalTitle || content != originalContent || options != originalOptions
+
+    private fun restoreOptions(defaults: NoteOptions) = NoteOptions(
+        isPinned = savedState[PINNED] ?: defaults.isPinned,
+        colorId = NoteColor.entries.find { it.name == savedState.get<String>(COLOR) } ?: defaults.colorId,
+        category = NoteCategory.entries.find { it.name == savedState.get<String>(CATEGORY) } ?: defaults.category,
+    )
 
     fun requestBack() {
         val current = state.value
@@ -105,7 +127,7 @@ internal class NoteEditorViewModel @Inject constructor(
         if (draft.isSaving || draft.isLoading || draft.error == EditorError.LOAD_FAILED) return
         mutableState.update { it.copy(isSaving = true, showDiscardDialog = false, error = null) }
         viewModelScope.launch {
-            val result = repository.save(noteId, draft.title, draft.content)
+            val result = repository.save(noteId, draft.title, draft.content, draft.options)
             if (result.isSuccess) {
                 events.send(EditorEffect.SAVED)
             } else {
@@ -119,5 +141,8 @@ internal class NoteEditorViewModel @Inject constructor(
     private companion object {
         const val TITLE = "draft_title"
         const val CONTENT = "draft_content"
+        const val PINNED = "draft_pinned"
+        const val COLOR = "draft_color"
+        const val CATEGORY = "draft_category"
     }
 }

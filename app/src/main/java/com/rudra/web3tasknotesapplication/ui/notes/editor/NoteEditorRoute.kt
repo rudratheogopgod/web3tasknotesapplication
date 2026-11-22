@@ -30,6 +30,7 @@ internal fun NoteEditorRoute(
         state = state,
         onTitleChange = viewModel::changeTitle,
         onContentChange = viewModel::changeContent,
+        onOptionsChange = viewModel::changeOptions,
         onBack = viewModel::requestBack,
         onSave = viewModel::save,
         onDiscard = viewModel::discard,

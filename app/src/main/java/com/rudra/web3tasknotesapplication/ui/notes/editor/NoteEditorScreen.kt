@@ -1,6 +1,8 @@
 package com.rudra.web3tasknotesapplication.ui.notes.editor
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -21,10 +23,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.rudra.web3tasknotesapplication.R
+import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.ui.components.noteDateLabel
 import com.rudra.web3tasknotesapplication.ui.theme.Spacing
 
 private val EditorMaxWidth = 720.dp
+private val CompactEditorHeight = 320.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +41,7 @@ internal fun NoteEditorScreen(
     onDiscard: () -> Unit,
     onKeepEditing: () -> Unit,
     onRequestDelete: (() -> Unit)? = null,
+    onOptionsChange: (NoteOptions) -> Unit,
 ) {
     val fieldsEnabled = !state.isLoading && !state.isSaving && state.error != EditorError.LOAD_FAILED
     Scaffold(
@@ -50,6 +55,7 @@ internal fun NoteEditorScreen(
                     }
                 },
                 actions = {
+                    PinNoteAction(state.options, fieldsEnabled, onOptionsChange)
                     if (!state.isNewNote && onRequestDelete != null) {
                         IconButton(onClick = onRequestDelete, enabled = fieldsEnabled) {
                             Icon(painterResource(R.drawable.ic_delete_note), stringResource(R.string.delete_note))
@@ -62,14 +68,15 @@ internal fun NoteEditorScreen(
             )
         },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),
+        BoxWithConstraints(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),
             contentAlignment = Alignment.TopCenter) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 state.error == EditorError.LOAD_FAILED -> Text(
                     stringResource(R.string.note_load_failed), Modifier.padding(Spacing.Large),
                 )
-                else -> EditorFields(state, onTitleChange, onContentChange, fieldsEnabled)
+                else -> EditorFields(state, onTitleChange, onContentChange, fieldsEnabled,
+                    compact = maxHeight < CompactEditorHeight, onOptionsChange = onOptionsChange)
             }
         }
     }
@@ -94,6 +101,8 @@ private fun EditorFields(
     onTitleChange: (String) -> Unit,
     onContentChange: (String) -> Unit,
     enabled: Boolean,
+    compact: Boolean,
+    onOptionsChange: (NoteOptions) -> Unit,
 ) {
     val titleFocus = remember { FocusRequester() }
     val bodyFocus = remember { FocusRequester() }
@@ -106,8 +115,9 @@ private fun EditorFields(
             focusedNewNote = true
         }
     }
+    val form = Modifier.widthIn(max = EditorMaxWidth).fillMaxSize()
     Column(
-        Modifier.widthIn(max = EditorMaxWidth).fillMaxSize().padding(Spacing.Large),
+        (if (compact) form.verticalScroll(rememberScrollState()) else form).padding(Spacing.Large),
         verticalArrangement = Arrangement.spacedBy(Spacing.Small),
     ) {
         state.error?.let {
@@ -129,9 +139,12 @@ private fun EditorFields(
         }
         OutlinedTextField(
             value = state.content, onValueChange = onContentChange,
-            modifier = Modifier.fillMaxWidth().weight(1f).focusRequester(bodyFocus),
+            modifier = Modifier.fillMaxWidth()
+                .then(if (compact) Modifier.heightIn(min = 96.dp) else Modifier.weight(1f))
+                .focusRequester(bodyFocus),
             label = { Text(stringResource(R.string.note_body)) },
             enabled = enabled,
         )
+        EditorNoteOptions(state.options, enabled, onOptionsChange)
     }
 }

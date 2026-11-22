@@ -3,6 +3,7 @@ package com.rudra.web3tasknotesapplication.ui.theme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.rudra.web3tasknotesapplication.domain.model.NoteColor
 
 /** Pastel card surfaces paired with a single readable foreground in each theme. */
 @Immutable
@@ -15,6 +16,16 @@ data class NotePalette(
     val lavender: Color,
     val onColor: Color,
 )
+
+/** Resolves stored note colors using the active palette. */
+internal fun NotePalette.forNote(color: NoteColor): Color = when (color) {
+    NoteColor.DEFAULT -> default
+    NoteColor.ROSE -> rose
+    NoteColor.PEACH -> peach
+    NoteColor.SAND -> sand
+    NoteColor.MINT -> mint
+    NoteColor.LAVENDER -> lavender
+}
 
 /** Light and dark variants are designed separately to retain readable contrast. */
 object NoteColors {

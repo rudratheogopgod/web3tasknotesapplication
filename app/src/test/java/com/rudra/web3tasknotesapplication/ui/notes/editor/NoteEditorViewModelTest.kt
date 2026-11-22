@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.rudra.web3tasknotesapplication.data.repository.BlankNoteException
 import com.rudra.web3tasknotesapplication.data.repository.NotesRepository
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
+import com.rudra.web3tasknotesapplication.domain.model.NoteColor
+import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -82,15 +85,42 @@ class NoteEditorViewModelTest {
         model.viewModelScope.cancel()
     }
 
+    @Test
+    fun metadataChangesRestoreAsAnUnsavedDraftAndArePassedToSave() = runTest(dispatcher) {
+        val note = Note(7, "Title", "Body", 10, 20)
+        val repository = FakeRepository(note)
+        val handle = SavedStateHandle(mapOf("noteId" to note.id))
+        val original = NoteEditorViewModel(handle, repository)
+        runCurrent()
+        val options = NoteOptions(true, NoteColor.MINT, NoteCategory.TODO_LIST)
+        original.changeOptions(options)
+        original.requestBack()
+        assertTrue(original.state.value.showDiscardDialog)
+        original.viewModelScope.cancel()
+
+        val restoredHandle = SavedStateHandle(handle.keys().associateWith { handle.get<Any>(it) })
+        val restored = NoteEditorViewModel(restoredHandle, repository)
+        runCurrent()
+        assertEquals(options, restored.state.value.options)
+        assertTrue(restored.state.value.hasUnsavedChanges)
+        repository.finishSave.complete(Unit)
+        restored.save()
+        assertEquals(EditorEffect.SAVED, restored.effects.first())
+        assertEquals(options, repository.savedOptions)
+        restored.viewModelScope.cancel()
+    }
+
     private class FakeRepository(private val note: Note? = null) : NotesRepository {
         var saves = 0
+        var savedOptions: NoteOptions? = null
         val finishSave = CompletableDeferred<Unit>()
         override fun observeAll(query: String, order: NoteSortOrder) = flowOf(listOfNotNull(note))
         override fun observeCreated(limit: Int) = error("Creation order is not used by this test")
         override fun observeById(id: Long) = flowOf(note?.takeIf { it.id == id })
-        override suspend fun save(id: Long?, title: String, content: String): Result<Note> {
+        override suspend fun save(id: Long?, title: String, content: String, options: NoteOptions?): Result<Note> {
             if (title.isBlank() && content.isBlank()) return Result.failure(BlankNoteException())
             saves++
+            savedOptions = options
             finishSave.await()
             return Result.success(Note(id ?: 1, title, content, 0, 0))
         }

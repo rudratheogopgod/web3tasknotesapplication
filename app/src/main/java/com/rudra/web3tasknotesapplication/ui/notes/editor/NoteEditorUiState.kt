@@ -1,11 +1,14 @@
 package com.rudra.web3tasknotesapplication.ui.notes.editor
 
+import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
+
 /** Keeps the editable draft and the actions currently available to the user. */
 internal data class NoteEditorUiState(
     val isNewNote: Boolean,
     val title: String = "",
     val content: String = "",
     val updatedAt: Long? = null,
+    val options: NoteOptions = NoteOptions(),
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val hasUnsavedChanges: Boolean = false,

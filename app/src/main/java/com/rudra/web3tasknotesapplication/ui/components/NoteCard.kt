@@ -27,6 +27,7 @@ import com.rudra.web3tasknotesapplication.domain.model.Note
 import com.rudra.web3tasknotesapplication.ui.theme.LocalNoteColors
 import com.rudra.web3tasknotesapplication.ui.theme.NotesShapes
 import com.rudra.web3tasknotesapplication.ui.theme.Spacing
+import com.rudra.web3tasknotesapplication.ui.theme.forNote
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -37,7 +38,7 @@ internal fun NoteCard(note: Note, onClick: () -> Unit, onDelete: (() -> Unit)? =
     var menuOpen by remember { mutableStateOf(false) }
     val actionsLabel = stringResource(R.string.note_actions)
     Surface(modifier = Modifier.fillMaxWidth(), shape = NotesShapes.Card,
-        color = palette.default, contentColor = palette.onColor) {
+        color = palette.forNote(note.colorId), contentColor = palette.onColor) {
         Box(Modifier.combinedClickable(
             onClick = onClick,
             onLongClickLabel = if (onDelete != null) actionsLabel else null,

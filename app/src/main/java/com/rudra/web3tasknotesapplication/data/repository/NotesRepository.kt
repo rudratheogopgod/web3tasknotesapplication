@@ -1,6 +1,7 @@
 package com.rudra.web3tasknotesapplication.data.repository
 
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.flow.Flow
 
@@ -11,8 +12,13 @@ interface NotesRepository {
     fun observeCreated(limit: Int = -1): Flow<List<Note>>
     fun observeById(id: Long): Flow<Note?>
 
-    /** Saves a new note when [id] is null, or updates an existing note atomically. */
-    suspend fun save(id: Long?, title: String, content: String): Result<Note>
+    /** Saves text and metadata atomically. Omitted [options] preserve existing metadata. */
+    suspend fun save(
+        id: Long?,
+        title: String,
+        content: String,
+        options: NoteOptions? = null,
+    ): Result<Note>
 
     /** Deletes the latest persisted row and returns its snapshot for Undo. */
     suspend fun delete(id: Long): Result<Note>

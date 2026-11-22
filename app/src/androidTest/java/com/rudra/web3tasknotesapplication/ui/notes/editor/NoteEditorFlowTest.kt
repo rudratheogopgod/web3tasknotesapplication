@@ -2,6 +2,7 @@ package com.rudra.web3tasknotesapplication.ui.notes.editor
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -30,6 +31,9 @@ class NoteEditorFlowTest {
         try {
             compose.onNodeWithContentDescription("Create note").performClick()
             compose.onNodeWithText("Title").performTextInput(title)
+            compose.onNodeWithContentDescription("Pin note").performClick()
+            compose.onNodeWithText("Journal").performClick()
+            compose.onNodeWithContentDescription("Rose").performClick()
             compose.onNodeWithText("Save").performClick()
             awaitText("Note saved")
             awaitText(title)
@@ -38,6 +42,9 @@ class NoteEditorFlowTest {
             compose.onNodeWithText("See all").assertDoesNotExist()
             compose.onAllNodes(hasText(title))[0].performClick()
             awaitText("Start typing…")
+            compose.onNodeWithContentDescription("Unpin note").assertExists()
+            compose.onNodeWithText("Journal").assertIsSelected()
+            compose.onNodeWithContentDescription("Rose").assertIsSelected()
             compose.onNodeWithText("Start typing…").performTextInput("Edited on device")
             compose.onNodeWithText("Save").performClick()
             awaitText("Edited on device")
