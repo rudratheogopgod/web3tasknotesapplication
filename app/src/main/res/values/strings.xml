@@ -8,6 +8,9 @@
     <string name="notes_empty_body">Save a thought, a list, or anything you want to remember.</string>
     <string name="notes_unavailable">Couldn’t load your notes. Please reopen the app to try again.</string>
     <string name="note_date_time">%1$s · %2$s</string>
+    <string name="note_card_summary">%1$s, %2$s</string>
+    <string name="note_card_summary_with_preview">%1$s, %2$s, %3$s</string>
+    <string name="note_pinned_status">Pinned</string>
     <string name="new_note">New note</string>
     <string name="edit_note">Edit note</string>
     <string name="navigate_back">Back</string>
@@ -34,7 +37,12 @@
     <string name="note_actions">Show note actions</string>
     <string name="search_notes">Search notes …</string>
     <string name="clear_search">Clear search</string>
-    <string name="sort_notes">Sort notes</string>
+    <string name="notes_menu">Notes menu</string>
+    <string name="theme_picker">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_save_failed">Couldn’t save your theme. Try again.</string>
     <string name="sort_updated">Last updated</string>
     <string name="sort_title">Title (A–Z)</string>
     <string name="notes_no_results">No notes match “%1$s”</string>

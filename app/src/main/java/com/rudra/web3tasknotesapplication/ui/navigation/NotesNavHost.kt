@@ -1,5 +1,8 @@
 package com.rudra.web3tasknotesapplication.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,17 +35,28 @@ internal const val EDITOR_NOTE_ID = "noteId"
 
 private const val EDITOR_DELETE_ID = "editor_delete_id"
 private const val EDITOR_RESULT = "editor_result"
+private const val NavigationFadeMillis = 240
 
 /** Hosts the typed destinations and reports editor results on the home screen. */
 @Composable
-internal fun NotesNavHost() {
+internal fun NotesNavHost(onOpenTheme: () -> Unit) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = Home) {
+    NavHost(
+        navController = navController,
+        startDestination = Home,
+        enterTransition = { fadeIn(tween(NavigationFadeMillis)) },
+        exitTransition = { fadeOut(tween(NavigationFadeMillis)) },
+    ) {
         composable<Home> { entry ->
             NotesDestination(entry,
-                onCreateNote = { navController.navigate(Editor()) { launchSingleTop = true } },
+                onCreateNote = {
+                    if (navController.currentBackStackEntry == entry) {
+                        navController.navigate(Editor()) { launchSingleTop = true }
+                    }
+                },
                 onOpenNote = { id -> navController.navigate(Editor(id)) { launchSingleTop = true } },
                 onSeeAll = { navController.navigate(RecentNotes) { launchSingleTop = true } },
+                onOpenTheme = onOpenTheme,
             )
         }
         composable<RecentNotes> { entry ->
@@ -76,6 +90,7 @@ private fun NotesDestination(
     onCreateNote: () -> Unit,
     onOpenNote: (Long) -> Unit,
     onSeeAll: (() -> Unit)? = null,
+    onOpenTheme: (() -> Unit)? = null,
     onBackFromRecent: (() -> Unit)? = null,
 ) {
     val snackbar = remember { SnackbarHostState() }
@@ -98,6 +113,7 @@ private fun NotesDestination(
         onCreateNote = onCreateNote,
         onOpenNote = onOpenNote,
         onSeeAll = onSeeAll,
+        onOpenTheme = onOpenTheme,
         onBackFromRecent = onBackFromRecent,
         snackbarHostState = snackbar,
         confirmedEditorDeleteId = deleteId,

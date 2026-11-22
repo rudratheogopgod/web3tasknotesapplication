@@ -36,6 +36,7 @@ internal class NoteEditorViewModel @Inject constructor(
         content = savedState[CONTENT] ?: "",
         options = restoreOptions(originalOptions),
         isLoading = noteId != null,
+        showDiscardDialog = noteId == null && savedState.get<Boolean>(DISCARD_DIALOG) == true,
     ))
     val state = mutableState.asStateFlow()
     private val events = Channel<EditorEffect>(Channel.BUFFERED)
@@ -72,6 +73,7 @@ internal class NoteEditorViewModel @Inject constructor(
             title = title, content = content, updatedAt = note.updatedAt, isLoading = false,
             options = options,
             hasUnsavedChanges = isChanged(title, content, options),
+            showDiscardDialog = savedState.get<Boolean>(DISCARD_DIALOG) == true,
         ) }
     }
 
@@ -103,17 +105,22 @@ internal class NoteEditorViewModel @Inject constructor(
         category = NoteCategory.entries.find { it.name == savedState.get<String>(CATEGORY) } ?: defaults.category,
     )
 
+    /** Prompts only for unsaved edits and ignores Back while the write is in flight. */
     fun requestBack() {
         val current = state.value
         if (current.isSaving) return
         if (current.hasUnsavedChanges) {
+            savedState[DISCARD_DIALOG] = true
             mutableState.update { it.copy(showDiscardDialog = true) }
         } else {
             events.trySend(EditorEffect.CLOSE)
         }
     }
 
-    fun keepEditing() = mutableState.update { it.copy(showDiscardDialog = false) }
+    fun keepEditing() {
+        savedState[DISCARD_DIALOG] = false
+        mutableState.update { it.copy(showDiscardDialog = false) }
+    }
 
     fun discard() {
         if (state.value.showDiscardDialog) {
@@ -122,9 +129,11 @@ internal class NoteEditorViewModel @Inject constructor(
         }
     }
 
+    /** Locks the draft before launching the write so repeated taps cannot insert duplicates. */
     fun save() {
         val draft = state.value
         if (draft.isSaving || draft.isLoading || draft.error == EditorError.LOAD_FAILED) return
+        savedState[DISCARD_DIALOG] = false
         mutableState.update { it.copy(isSaving = true, showDiscardDialog = false, error = null) }
         viewModelScope.launch {
             val result = repository.save(noteId, draft.title, draft.content, draft.options)
@@ -144,5 +153,6 @@ internal class NoteEditorViewModel @Inject constructor(
         const val PINNED = "draft_pinned"
         const val COLOR = "draft_color"
         const val CATEGORY = "draft_category"
+        const val DISCARD_DIALOG = "draft_discard_dialog"
     }
 }

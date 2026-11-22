@@ -14,6 +14,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import com.rudra.web3tasknotesapplication.R
 import com.rudra.web3tasknotesapplication.ui.theme.NotesShapes
@@ -27,7 +29,7 @@ internal fun NotesSearchBar(query: String, onQueryChange: (String) -> Unit, modi
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        modifier = modifier,
+        modifier = modifier.semantics { contentDescription = label },
         placeholder = { Text(label) },
         leadingIcon = { Icon(painterResource(R.drawable.ic_notes_search), null) },
         trailingIcon = if (query.isEmpty()) null else {

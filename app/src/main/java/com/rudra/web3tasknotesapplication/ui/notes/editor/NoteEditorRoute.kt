@@ -40,8 +40,10 @@ internal fun NoteEditorRoute(
     if (confirmDelete) {
         DeleteNoteDialog(
             onConfirm = {
-                confirmDelete = false
-                viewModel.noteId?.let(onDelete)
+                if (confirmDelete) {
+                    confirmDelete = false
+                    viewModel.noteId?.let(onDelete)
+                }
             },
             onCancel = { confirmDelete = false },
         )

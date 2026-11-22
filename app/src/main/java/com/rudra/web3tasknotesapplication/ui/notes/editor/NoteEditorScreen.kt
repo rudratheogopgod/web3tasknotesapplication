@@ -17,7 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -29,8 +32,9 @@ import com.rudra.web3tasknotesapplication.ui.theme.Spacing
 
 private val EditorMaxWidth = 720.dp
 private val CompactEditorHeight = 320.dp
+private const val CompactBodyMaxLines = 6
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Keeps the editor actions visible while its fields scroll in short windows. */
 @Composable
 internal fun NoteEditorScreen(
     state: NoteEditorUiState,
@@ -44,39 +48,37 @@ internal fun NoteEditorScreen(
     onOptionsChange: (NoteOptions) -> Unit,
 ) {
     val fieldsEnabled = !state.isLoading && !state.isSaving && state.error != EditorError.LOAD_FAILED
+    val keyboard = LocalSoftwareKeyboardController.current
+    val compactHeight = CompactEditorHeight * LocalDensity.current.fontScale.coerceAtLeast(1f)
+    val systemInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
     Scaffold(
-        contentWindowInsets = WindowInsets.safeDrawing.union(WindowInsets.captionBar),
+        contentWindowInsets = systemInsets,
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (state.isNewNote) R.string.new_note else R.string.edit_note)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !state.isSaving) {
-                        Icon(painterResource(R.drawable.ic_editor_back), stringResource(R.string.navigate_back))
-                    }
+            EditorToolbar(
+                state = state,
+                insets = systemInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                fieldsEnabled = fieldsEnabled,
+                onBack = {
+                    keyboard?.hide()
+                    onBack()
                 },
-                actions = {
-                    PinNoteAction(state.options, fieldsEnabled, onOptionsChange)
-                    if (!state.isNewNote && onRequestDelete != null) {
-                        IconButton(onClick = onRequestDelete, enabled = fieldsEnabled) {
-                            Icon(painterResource(R.drawable.ic_delete_note), stringResource(R.string.delete_note))
-                        }
-                    }
-                    TextButton(onClick = onSave, enabled = fieldsEnabled) {
-                        Text(stringResource(if (state.isSaving) R.string.saving_note else R.string.save_note))
-                    }
-                },
+                onSave = onSave,
+                onRequestDelete = onRequestDelete,
+                onOptionsChange = onOptionsChange,
             )
         },
     ) { padding ->
-        BoxWithConstraints(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),
-            contentAlignment = Alignment.TopCenter) {
+        BoxWithConstraints(
+            Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
             when {
                 state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 state.error == EditorError.LOAD_FAILED -> Text(
                     stringResource(R.string.note_load_failed), Modifier.padding(Spacing.Large),
                 )
                 else -> EditorFields(state, onTitleChange, onContentChange, fieldsEnabled,
-                    compact = maxHeight < CompactEditorHeight, onOptionsChange = onOptionsChange)
+                    compact = maxHeight < compactHeight, onOptionsChange = onOptionsChange)
             }
         }
     }
@@ -84,14 +86,51 @@ internal fun NoteEditorScreen(
         AlertDialog(
             onDismissRequest = onKeepEditing,
             title = { Text(stringResource(R.string.discard_changes)) },
-            confirmButton = { TextButton(onClick = onSave) { Text(stringResource(R.string.save_note)) } },
-            dismissButton = {
-                Column(horizontalAlignment = Alignment.End) {
+            confirmButton = {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
                     TextButton(onClick = onKeepEditing) { Text(stringResource(R.string.keep_editing)) }
                     TextButton(onClick = onDiscard) { Text(stringResource(R.string.discard_note)) }
+                    TextButton(onClick = onSave) { Text(stringResource(R.string.save_note)) }
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun EditorToolbar(
+    state: NoteEditorUiState,
+    insets: WindowInsets,
+    fieldsEnabled: Boolean,
+    onBack: () -> Unit,
+    onSave: () -> Unit,
+    onRequestDelete: (() -> Unit)?,
+    onOptionsChange: (NoteOptions) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().windowInsetsPadding(insets).padding(vertical = Spacing.ExtraSmall),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack, enabled = !state.isSaving) {
+            Icon(painterResource(R.drawable.ic_editor_back), stringResource(R.string.navigate_back))
+        }
+        Text(
+            stringResource(if (state.isNewNote) R.string.new_note else R.string.edit_note),
+            Modifier.weight(1f).semantics { heading() },
+            style = MaterialTheme.typography.titleMedium,
+        )
+        PinNoteAction(state.options, fieldsEnabled, onOptionsChange)
+        if (!state.isNewNote && onRequestDelete != null) {
+            IconButton(onClick = onRequestDelete, enabled = fieldsEnabled) {
+                Icon(painterResource(R.drawable.ic_delete_note), stringResource(R.string.delete_note))
+            }
+        }
+        TextButton(onClick = onSave, enabled = fieldsEnabled) {
+            Text(stringResource(if (state.isSaving) R.string.saving_note else R.string.save_note))
+        }
     }
 }
 
@@ -115,9 +154,10 @@ private fun EditorFields(
             focusedNewNote = true
         }
     }
+    val scroll = rememberScrollState()
     val form = Modifier.widthIn(max = EditorMaxWidth).fillMaxSize()
     Column(
-        (if (compact) form.verticalScroll(rememberScrollState()) else form).padding(Spacing.Large),
+        (if (compact) form.verticalScroll(scroll) else form).padding(Spacing.Large),
         verticalArrangement = Arrangement.spacedBy(Spacing.Small),
     ) {
         state.error?.let {
@@ -140,9 +180,11 @@ private fun EditorFields(
         OutlinedTextField(
             value = state.content, onValueChange = onContentChange,
             modifier = Modifier.fillMaxWidth()
-                .then(if (compact) Modifier.heightIn(min = 96.dp) else Modifier.weight(1f))
+                .then(if (compact) Modifier else Modifier.weight(1f))
                 .focusRequester(bodyFocus),
             label = { Text(stringResource(R.string.note_body)) },
+            minLines = if (compact) 3 else 1,
+            maxLines = if (compact) CompactBodyMaxLines else Int.MAX_VALUE,
             enabled = enabled,
         )
         EditorNoteOptions(state.options, enabled, onOptionsChange)

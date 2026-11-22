@@ -1,6 +1,7 @@
 package com.rudra.web3tasknotesapplication.ui.notes.list
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -11,31 +12,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.rudra.web3tasknotesapplication.R
 import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
 import com.rudra.web3tasknotesapplication.ui.theme.NotesShapes
 import com.rudra.web3tasknotesapplication.ui.theme.Spacing
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val CategoryOptions = listOf(null) + NoteCategory.entries
+
+/** Keeps categories keyboard- and TalkBack-selectable even when the row must scroll. */
 @Composable
 internal fun CategoryControls(
     selected: NoteCategory?,
-    counts: Map<NoteCategory, Int>,
     onSelect: (NoteCategory?) -> Unit,
-    browseOpen: Boolean,
-    onBrowseChange: (Boolean) -> Unit,
+    onBrowse: () -> Unit,
 ) {
-    val options = listOf(null) + NoteCategory.entries
     Column {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.notes_categories), Modifier.weight(1f),
+            Text(stringResource(R.string.notes_categories), Modifier.weight(1f).semantics { heading() },
                 style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = { onBrowseChange(true) }) { Text(stringResource(R.string.browse_categories)) }
+            TextButton(onClick = onBrowse) { Text(stringResource(R.string.browse_categories)) }
         }
         Surface(shape = NotesShapes.Pill, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Row(Modifier.horizontalScroll(rememberScrollState()).selectableGroup().padding(Spacing.ExtraSmall)) {
-                options.forEach { option ->
+                CategoryOptions.forEach { option ->
                     val active = option == selected
                     Surface(
                         shape = NotesShapes.Pill,
@@ -52,20 +54,33 @@ internal fun CategoryControls(
             }
         }
     }
-    if (browseOpen) {
-        ModalBottomSheet(onDismissRequest = { onBrowseChange(false) }) {
-            Column(Modifier.padding(bottom = Spacing.Large)) {
-                Text(stringResource(R.string.notes_categories), Modifier.padding(Spacing.Large),
-                    style = MaterialTheme.typography.titleMedium)
-                options.forEach { option ->
-                    ListItem(
-                        trailingContent = { Text((option?.let { counts[it] ?: 0 } ?: counts.values.sum()).toString()) },
-                        modifier = Modifier.selectable(option == selected, role = Role.RadioButton) {
-                            onSelect(option)
-                            onBrowseChange(false)
-                        },
-                    ) { Text(stringResource(categoryLabel(option))) }
-                }
+}
+
+/** Owns the sheet outside the lazy grid so its lifetime does not depend on the category row. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CategoryPicker(
+    selected: NoteCategory?,
+    counts: Map<NoteCategory, Int>,
+    onSelect: (NoteCategory?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).selectableGroup().padding(bottom = Spacing.Large),
+        ) {
+            Text(
+                stringResource(R.string.notes_categories), Modifier.padding(Spacing.Large).semantics { heading() },
+                style = MaterialTheme.typography.titleMedium,
+            )
+            CategoryOptions.forEach { option ->
+                ListItem(
+                    trailingContent = { Text((option?.let { counts[it] ?: 0 } ?: counts.values.sum()).toString()) },
+                    modifier = Modifier.selectable(option == selected, role = Role.RadioButton) {
+                        onSelect(option)
+                        onDismiss()
+                    },
+                ) { Text(stringResource(categoryLabel(option))) }
             }
         }
     }

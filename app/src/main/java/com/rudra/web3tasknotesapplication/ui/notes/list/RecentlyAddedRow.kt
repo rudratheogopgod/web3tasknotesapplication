@@ -18,11 +18,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.rudra.web3tasknotesapplication.R
 import com.rudra.web3tasknotesapplication.domain.model.Note
 import com.rudra.web3tasknotesapplication.ui.components.NoteCard
 import com.rudra.web3tasknotesapplication.ui.theme.Spacing
+
+private val RecentCardWidth = 160.dp
 
 @Composable
 internal fun RecentlyAddedRow(
@@ -34,13 +38,13 @@ internal fun RecentlyAddedRow(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.Small)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.recently_added), Modifier.weight(1f),
+            Text(stringResource(R.string.recently_added), Modifier.weight(1f).semantics { heading() },
                 style = MaterialTheme.typography.titleMedium)
             TextButton(onClick = onSeeAll) { Text(stringResource(R.string.see_all_recent)) }
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.Medium)) {
             items(notes, key = { it.id }) { note ->
-                Box(Modifier.width(160.dp)) {
+                Box(Modifier.width(RecentCardWidth)) {
                     NoteCard(note, onClick = { onOpenNote(note.id) },
                         onDelete = onRequestDelete?.let { request -> { request(note.id) } },
                         onTogglePin = onTogglePin?.let { toggle -> { toggle(note.id) } })
@@ -56,6 +60,7 @@ internal fun RecentScreenHeader(onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(painterResource(R.drawable.ic_editor_back), stringResource(R.string.navigate_back))
         }
-        Text(stringResource(R.string.recently_added), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.recently_added), Modifier.semantics { heading() },
+            style = MaterialTheme.typography.titleLarge)
     }
 }

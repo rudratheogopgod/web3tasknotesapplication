@@ -26,6 +26,7 @@ internal fun NotesListRoute(
     confirmedEditorDeleteId: Long? = null,
     onEditorDeleteConsumed: () -> Unit = {},
     onSeeAll: (() -> Unit)? = null,
+    onOpenTheme: (() -> Unit)? = null,
     onBackFromRecent: (() -> Unit)? = null,
 ) {
     val state by (if (onBackFromRecent == null) viewModel.homeNotes else viewModel.allRecent)
@@ -52,7 +53,7 @@ internal fun NotesListRoute(
     NotesListScreen(state, onCreateNote, onOpenNote, snackbarHostState,
         onRequestDelete = { confirmId = it }, query = query, sortOrder = order,
         onQueryChange = viewModel::changeQuery, onSortOrderChange = viewModel::changeSortOrder, recent = recent,
-        onSeeAll = onSeeAll, onBackFromRecent = onBackFromRecent,
+        onSeeAll = onSeeAll, onBackFromRecent = onBackFromRecent, onOpenTheme = onOpenTheme,
         category = category, categoryCounts = categoryCounts,
         onCategoryChange = viewModel::selectCategory, onTogglePin = viewModel::togglePin)
     confirmId?.let { id ->
