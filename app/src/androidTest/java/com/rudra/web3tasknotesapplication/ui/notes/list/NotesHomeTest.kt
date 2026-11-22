@@ -1,6 +1,10 @@
 package com.rudra.web3tasknotesapplication.ui.notes.list
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.lifecycle.SavedStateHandle
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.room.Room
@@ -28,7 +32,7 @@ class NotesHomeTest {
         val db = Room.inMemoryDatabaseBuilder(context, NotesDatabase::class.java).build()
         val repository = NotesRepositoryImpl(db.noteDao(), db,
             DefaultDispatcherProvider, SystemTimeProvider, context)
-        val viewModel = NotesListViewModel(repository)
+        val viewModel = NotesListViewModel(repository, SavedStateHandle())
         try {
             compose.setContent {
                 Web3TaskNotesTheme { NotesListRoute({}, {}, viewModel) }
@@ -37,6 +41,11 @@ class NotesHomeTest {
             runBlocking { repository.save(null, "Weekend plans", "Pick up groceries").getOrThrow() }
             awaitText("Weekend plans")
             compose.onNodeWithText("Pick up groceries").assertIsDisplayed()
+            compose.onNodeWithText("Search notes …").performTextInput("missing")
+            awaitText("No notes match “missing”")
+            compose.onNodeWithText("Create your first note").assertDoesNotExist()
+            compose.onNodeWithContentDescription("Clear search").performClick()
+            awaitText("Weekend plans")
         } finally {
             viewModel.viewModelScope.cancel()
             db.close()

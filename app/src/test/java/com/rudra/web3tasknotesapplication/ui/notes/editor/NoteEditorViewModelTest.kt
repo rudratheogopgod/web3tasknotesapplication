@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.rudra.web3tasknotesapplication.data.repository.BlankNoteException
 import com.rudra.web3tasknotesapplication.data.repository.NotesRepository
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -84,7 +85,7 @@ class NoteEditorViewModelTest {
     private class FakeRepository(private val note: Note? = null) : NotesRepository {
         var saves = 0
         val finishSave = CompletableDeferred<Unit>()
-        override fun observeAll() = flowOf(listOfNotNull(note))
+        override fun observeAll(query: String, order: NoteSortOrder) = flowOf(listOfNotNull(note))
         override fun observeById(id: Long) = flowOf(note?.takeIf { it.id == id })
         override suspend fun save(id: Long?, title: String, content: String): Result<Note> {
             if (title.isBlank() && content.isBlank()) return Result.failure(BlankNoteException())

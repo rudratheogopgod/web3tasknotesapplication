@@ -1,6 +1,7 @@
 package com.rudra.web3tasknotesapplication.data.local
 
 import androidx.room.Room
+import com.rudra.web3tasknotesapplication.data.repository.noteSearchPattern
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.flow.first
@@ -21,6 +22,22 @@ class NoteDaoTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         database = Room.inMemoryDatabaseBuilder(context, NotesDatabase::class.java).build()
         dao = database.noteDao()
+    }
+
+    @Test
+    fun searchMatchesTitleAndBodyWithLiteralWildcardsAndDeterministicSort() = runTest {
+        suspend fun insert(title: String, content: String, updated: Long) =
+            dao.insert(NoteEntity(title = title, content = content, createdAt = 1, updatedAt = updated))
+
+        val first = insert("alpha 50%_!", "", 4)
+        val second = insert("ALPHA 50%_!", "", 4)
+        val older = insert("Alpha 50%_!", "", 3)
+        val body = insert("Zebra", "alpha 50%_!", 9)
+        val decoy = insert("Alpha 50xx!", "", 10)
+        val literal = noteSearchPattern("  aLpHa 50%_!  ")
+        assertEquals(listOf(body, second, first, older), dao.observeAll(literal).first().map { it.id })
+        assertEquals(listOf(second, first, older, body), dao.observeByTitle(literal).first().map { it.id })
+        assertEquals(listOf(decoy, body, second, first, older), dao.observeAll().first().map { it.id })
     }
 
     @After

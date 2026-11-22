@@ -12,7 +12,9 @@ import com.rudra.web3tasknotesapplication.data.local.NotesDatabase
 import com.rudra.web3tasknotesapplication.data.mapper.toEntity
 import com.rudra.web3tasknotesapplication.data.mapper.toNote
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -27,7 +29,14 @@ class NotesRepositoryImpl @Inject constructor(
     private val appContext = context.applicationContext
     private val rules = NoteSaveRules(time) { appContext.getString(R.string.untitled_note) }
 
-    override fun observeAll() = dao.observeAll().map { rows -> rows.map { it.toNote() } }
+    override fun observeAll(query: String, order: NoteSortOrder): Flow<List<Note>> {
+        val pattern = noteSearchPattern(query)
+        val rows = when (order) {
+            NoteSortOrder.LAST_UPDATED -> dao.observeAll(pattern)
+            NoteSortOrder.TITLE -> dao.observeByTitle(pattern)
+        }
+        return rows.map { entities -> entities.map { it.toNote() } }
+    }
 
     override fun observeById(id: Long) = dao.observeById(id).map { it?.toNote() }
 

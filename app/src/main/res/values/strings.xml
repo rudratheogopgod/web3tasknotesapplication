@@ -32,4 +32,11 @@
     <string name="note_delete_failed">Couldn’t delete the note. Try again.</string>
     <string name="note_restore_failed">Couldn’t restore the note.</string>
     <string name="note_actions">Show note actions</string>
+    <string name="search_notes">Search notes …</string>
+    <string name="clear_search">Clear search</string>
+    <string name="sort_notes">Sort notes</string>
+    <string name="sort_updated">Last updated</string>
+    <string name="sort_title">Title (A–Z)</string>
+    <string name="notes_no_results">No notes match “%1$s”</string>
+    <string name="notes_search_suggestion">Try a different search or clear the field.</string>
 </resources>

@@ -6,6 +6,7 @@ import com.rudra.web3tasknotesapplication.domain.model.Note
 internal sealed interface NotesListUiState {
     data object Loading : NotesListUiState
     data object Empty : NotesListUiState
+    data class NoResults(val query: String) : NotesListUiState
     data object Unavailable : NotesListUiState
     data class Loaded(val notes: List<Note>) : NotesListUiState
 }

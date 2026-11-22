@@ -2,12 +2,14 @@ package com.rudra.web3tasknotesapplication.ui.notes.list
 
 import com.rudra.web3tasknotesapplication.data.repository.NotesRepository
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -27,7 +29,7 @@ class NotesListViewModelTest {
     @Test
     fun transitionsFromLoadingToEmptyToLoadedAndBack() = runTest(dispatcher) {
         val repository = FakeRepository()
-        val viewModel = NotesListViewModel(repository)
+        val viewModel = NotesListViewModel(repository, SavedStateHandle())
         assertEquals(NotesListUiState.Loading, viewModel.uiState.value)
         backgroundScope.launch(dispatcher) { viewModel.uiState.collect {} }
         testScheduler.runCurrent()
@@ -48,7 +50,7 @@ class NotesListViewModelTest {
     fun undoRestoresTheExactSnapshotOnceAndRoomDrivesTheList() = runTest(dispatcher) {
         val original = Note(9, "Draft", "Original text", 10, 42)
         val repository = FakeRepository().apply { notes.value = listOf(original) }
-        val model = NotesListViewModel(repository)
+        val model = NotesListViewModel(repository, SavedStateHandle())
         backgroundScope.launch(dispatcher) { model.uiState.collect {} }
         testScheduler.runCurrent()
 
@@ -69,11 +71,44 @@ class NotesListViewModelTest {
         model.viewModelScope.cancel()
     }
 
+    @Test
+    fun onlyQueriesTheLatestTermAfterDebounceAndResortsImmediately() = runTest(dispatcher) {
+        val repository = FakeRepository()
+        val model = NotesListViewModel(repository, SavedStateHandle())
+        backgroundScope.launch(dispatcher) { model.uiState.collect {} }
+        testScheduler.runCurrent()
+        model.changeQuery("old")
+        testScheduler.runCurrent()
+        testScheduler.advanceTimeBy(200)
+        model.changeQuery("  newest  ")
+        testScheduler.runCurrent()
+        testScheduler.advanceTimeBy(249)
+        testScheduler.runCurrent()
+        assertEquals(listOf("" to NoteSortOrder.LAST_UPDATED), repository.queries)
+        testScheduler.advanceTimeBy(1)
+        testScheduler.runCurrent()
+        assertEquals("newest" to NoteSortOrder.LAST_UPDATED, repository.queries.last())
+        assertEquals(NotesListUiState.NoResults("newest"), model.uiState.value)
+
+        model.changeSortOrder(NoteSortOrder.TITLE)
+        testScheduler.runCurrent()
+        assertEquals("newest" to NoteSortOrder.TITLE, repository.queries.last())
+        model.changeQuery(" ")
+        testScheduler.runCurrent()
+        assertEquals("" to NoteSortOrder.TITLE, repository.queries.last())
+        assertEquals(NotesListUiState.Empty, model.uiState.value)
+        model.viewModelScope.cancel()
+    }
+
     private class FakeRepository : NotesRepository {
         val notes = MutableStateFlow(emptyList<Note>())
         var deleteCalls = 0
         var restoreCalls = 0
-        override fun observeAll() = notes
+        val queries = mutableListOf<Pair<String, NoteSortOrder>>()
+        override fun observeAll(query: String, order: NoteSortOrder): MutableStateFlow<List<Note>> {
+            queries += query to order
+            return notes
+        }
         override fun observeById(id: Long) = error("Only list observation is used")
         override suspend fun save(id: Long?, title: String, content: String): Result<Note> =
             error("Only list observation is used")

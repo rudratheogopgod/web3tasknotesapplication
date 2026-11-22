@@ -10,8 +10,19 @@ import kotlinx.coroutines.flow.Flow
 /** Keeps queries and ordering rules close to the persisted data. */
 @Dao
 interface NoteDao {
-    @Query("SELECT * FROM notes ORDER BY updatedAt DESC, id DESC")
-    fun observeAll(): Flow<List<NoteEntity>>
+    @Query("""
+        SELECT * FROM notes
+        WHERE :pattern IS NULL OR title LIKE :pattern ESCAPE '!' OR content LIKE :pattern ESCAPE '!'
+        ORDER BY updatedAt DESC, id DESC
+    """)
+    fun observeAll(pattern: String? = null): Flow<List<NoteEntity>>
+
+    @Query("""
+        SELECT * FROM notes
+        WHERE :pattern IS NULL OR title LIKE :pattern ESCAPE '!' OR content LIKE :pattern ESCAPE '!'
+        ORDER BY title COLLATE NOCASE ASC, updatedAt DESC, id DESC
+    """)
+    fun observeByTitle(pattern: String?): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes WHERE id = :id")
     fun observeById(id: Long): Flow<NoteEntity?>

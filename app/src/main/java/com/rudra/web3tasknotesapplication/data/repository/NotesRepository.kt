@@ -1,11 +1,12 @@
 package com.rudra.web3tasknotesapplication.data.repository
 
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.flow.Flow
 
 /** Exposes Room-backed state without exposing persistence types to callers. */
 interface NotesRepository {
-    fun observeAll(): Flow<List<Note>>
+    fun observeAll(query: String = "", order: NoteSortOrder = NoteSortOrder.LAST_UPDATED): Flow<List<Note>>
     fun observeById(id: Long): Flow<Note?>
 
     /** Saves a new note when [id] is null, or updates an existing note atomically. */

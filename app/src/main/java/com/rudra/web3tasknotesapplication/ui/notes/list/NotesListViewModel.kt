@@ -1,6 +1,14 @@
 package com.rudra.web3tasknotesapplication.ui.notes.list
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import com.rudra.web3tasknotesapplication.domain.model.Note
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,16 +25,44 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /** Keeps Room as the source of truth and shares the latest list with the screen. */
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-internal class NotesListViewModel @Inject constructor(private val repository: NotesRepository) : ViewModel() {
+internal class NotesListViewModel @Inject constructor(
+    private val repository: NotesRepository,
+    private val savedState: SavedStateHandle,
+) : ViewModel() {
+    val query = savedState.getStateFlow("search_query", "")
+    private val orderName = savedState.getStateFlow("sort_order", NoteSortOrder.LAST_UPDATED.name)
+    val sortOrder = orderName.map(NoteSortOrder::valueOf)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, NoteSortOrder.valueOf(orderName.value))
+
+    fun changeQuery(value: String) {
+        savedState["search_query"] = value
+    }
+
+    fun changeSortOrder(order: NoteSortOrder) {
+        savedState["sort_order"] = order.name
+    }
     private val writes = mutableSetOf<Long>()
     private val pending = MutableStateFlow<List<DeleteMessage>>(emptyList())
     val deleteMessages = pending.asStateFlow()
 
-    val uiState = repository.observeAll()
-        .map { notes ->
-            val state: NotesListUiState =
-                if (notes.isEmpty()) NotesListUiState.Empty else NotesListUiState.Loaded(notes)
+    val uiState = query.map(String::trim).distinctUntilChanged()
+        .flatMapLatest { term ->
+            flow {
+                if (term.isNotEmpty()) delay(250)
+                emitAll(sortOrder.flatMapLatest { order -> observeResults(term, order) })
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotesListUiState.Loading)
+
+    private fun observeResults(term: String, order: NoteSortOrder) =
+        repository.observeAll(term, order).map { notes ->
+            val state: NotesListUiState = when {
+                notes.isNotEmpty() -> NotesListUiState.Loaded(notes)
+                term.isNotEmpty() -> NotesListUiState.NoResults(term)
+                else -> NotesListUiState.Empty
+            }
             state
         }
         .catch { failure ->
@@ -35,8 +71,6 @@ internal class NotesListViewModel @Inject constructor(private val repository: No
             }
             emit(NotesListUiState.Unavailable)
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotesListUiState.Loading)
-
     fun deleteNote(id: Long) {
         if (!writes.add(id)) return
         viewModelScope.launch {
