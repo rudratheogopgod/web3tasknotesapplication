@@ -1,4 +1,11 @@
 <resources>
     <string name="app_name">Cool Notes</string>
     <string name="untitled_note">Untitled note</string>
+    <string name="all_notes">All notes</string>
+    <string name="create_note">Create note</string>
+    <string name="create_first_note">Create your first note</string>
+    <string name="notes_empty_title">No notes yet</string>
+    <string name="notes_empty_body">Save a thought, a list, or anything you want to remember.</string>
+    <string name="notes_unavailable">Couldn’t load your notes. Please reopen the app to try again.</string>
+    <string name="note_date_time">%1$s · %2$s</string>
 </resources>
