@@ -8,4 +8,20 @@
     <string name="notes_empty_body">Save a thought, a list, or anything you want to remember.</string>
     <string name="notes_unavailable">Couldn’t load your notes. Please reopen the app to try again.</string>
     <string name="note_date_time">%1$s · %2$s</string>
+    <string name="new_note">New note</string>
+    <string name="edit_note">Edit note</string>
+    <string name="navigate_back">Back</string>
+    <string name="save_note">Save</string>
+    <string name="saving_note">Saving…</string>
+    <string name="note_title">Title</string>
+    <string name="note_body">Start typing…</string>
+    <string name="note_last_edited">Last edited %1$s</string>
+    <string name="note_blank">Add a title or some text to save</string>
+    <string name="note_save_failed">Couldn’t save your note. Try again.</string>
+    <string name="note_load_failed">Couldn’t load this note.</string>
+    <string name="note_not_found">This note no longer exists.</string>
+    <string name="note_saved">Note saved</string>
+    <string name="discard_changes">Discard changes?</string>
+    <string name="discard_note">Discard</string>
+    <string name="keep_editing">Keep editing</string>
 </resources>

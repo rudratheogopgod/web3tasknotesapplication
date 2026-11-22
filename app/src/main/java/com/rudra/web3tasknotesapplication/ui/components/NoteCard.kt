@@ -42,7 +42,7 @@ internal fun NoteCard(note: Note, onClick: () -> Unit) {
 }
 
 @Composable
-private fun noteDateLabel(timestamp: Long): String {
+internal fun noteDateLabel(timestamp: Long): String {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     val date = Date(timestamp)

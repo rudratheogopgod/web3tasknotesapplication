@@ -27,11 +27,13 @@ internal fun NotesListScreen(
     state: NotesListUiState,
     onCreateNote: () -> Unit,
     onOpenNote: (Long) -> Unit,
+    snackbarHostState: SnackbarHostState? = null,
 ) {
     val insets = WindowInsets.safeDrawing.union(WindowInsets.captionBar)
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = insets,
+        snackbarHost = { snackbarHostState?.let { SnackbarHost(it) } },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onCreateNote,

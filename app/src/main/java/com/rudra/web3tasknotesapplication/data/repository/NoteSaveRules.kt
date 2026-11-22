@@ -5,7 +5,7 @@ import com.rudra.web3tasknotesapplication.core.time.TimeProvider
 
 internal class NoteSaveRules(private val time: TimeProvider, private val untitled: () -> String) {
     fun prepare(existing: Note?, title: String, content: String): Note {
-        require(title.isNotBlank() || content.isNotBlank())
+        if (title.isBlank() && content.isBlank()) throw BlankNoteException()
         val savedTitle = title.ifBlank(untitled)
         if (existing != null && existing.title == savedTitle && existing.content == content) {
             return existing
