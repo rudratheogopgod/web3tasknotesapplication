@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rudra.web3tasknotesapplication.R
+import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
 import com.rudra.web3tasknotesapplication.ui.components.DeleteNoteDialog
 
 @Composable
@@ -27,12 +28,17 @@ internal fun NotesListRoute(
     onSeeAll: (() -> Unit)? = null,
     onBackFromRecent: (() -> Unit)? = null,
 ) {
-    val state by (if (onBackFromRecent == null) viewModel.uiState else viewModel.allRecent)
+    val state by (if (onBackFromRecent == null) viewModel.homeNotes else viewModel.allRecent)
         .collectAsStateWithLifecycle()
     val recent = if (onBackFromRecent == null && onSeeAll != null) {
         val recentState by viewModel.recent.collectAsStateWithLifecycle()
         (recentState as? NotesListUiState.Loaded)?.notes.orEmpty()
     } else emptyList()
+    val unfiltered by viewModel.uiState.collectAsStateWithLifecycle()
+    val categoryName by viewModel.category.collectAsStateWithLifecycle()
+    val category = NoteCategory.entries.find { it.name == categoryName }
+    val categoryCounts = (unfiltered as? NotesListUiState.Loaded)?.notes.orEmpty()
+        .groupingBy { it.category }.eachCount()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val order by viewModel.sortOrder.collectAsStateWithLifecycle()
     var confirmId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -46,7 +52,9 @@ internal fun NotesListRoute(
     NotesListScreen(state, onCreateNote, onOpenNote, snackbarHostState,
         onRequestDelete = { confirmId = it }, query = query, sortOrder = order,
         onQueryChange = viewModel::changeQuery, onSortOrderChange = viewModel::changeSortOrder, recent = recent,
-        onSeeAll = onSeeAll, onBackFromRecent = onBackFromRecent)
+        onSeeAll = onSeeAll, onBackFromRecent = onBackFromRecent,
+        category = category, categoryCounts = categoryCounts,
+        onCategoryChange = viewModel::selectCategory, onTogglePin = viewModel::togglePin)
     confirmId?.let { id ->
         DeleteNoteDialog(
             onConfirm = {
@@ -66,6 +74,7 @@ private fun DeleteSnackbar(viewModel: NotesListViewModel, host: SnackbarHostStat
         is DeleteMessage.Deleted -> R.string.note_deleted
         is DeleteMessage.DeleteFailed -> R.string.note_delete_failed
         is DeleteMessage.RestoreFailed -> R.string.note_restore_failed
+        is DeleteMessage.PinFailed -> R.string.note_pin_failed
     })
     val action = if (message is DeleteMessage.Deleted) stringResource(R.string.undo_delete) else null
     LaunchedEffect(message, host) {

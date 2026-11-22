@@ -1,5 +1,8 @@
 package com.rudra.web3tasknotesapplication.ui.notes.list
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
@@ -46,8 +49,19 @@ class NotesHomeTest {
             awaitText("No notes match “missing”")
             compose.onNodeWithText("Recently added").assertDoesNotExist()
             compose.onNodeWithText("Create your first note").assertDoesNotExist()
+            compose.onNodeWithText("Categories").assertDoesNotExist()
             compose.onNodeWithContentDescription("Clear search").performClick()
             awaitText("Weekend plans")
+            compose.onAllNodes(hasText("Weekend plans"))[0].performSemanticsAction(SemanticsActions.OnLongClick)
+            compose.onNodeWithText("Pin note").performClick()
+            awaitText("Pinned")
+            compose.onNodeWithText("Browse").performClick()
+            compose.onNode(hasText("Journal") and hasText("0")).performClick()
+            awaitText("No notes in this category")
+            compose.onNodeWithText("Search notes …").performTextInput("Weekend")
+            awaitText("Weekend plans")
+            compose.onNodeWithText("Pinned").assertDoesNotExist()
+            compose.onNodeWithText("Categories").assertDoesNotExist()
         } finally {
             viewModel.viewModelScope.cancel()
             db.close()

@@ -41,6 +41,7 @@ internal fun NotesSearchBar(query: String, onQueryChange: (String) -> Unit, modi
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surface,
             unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
         ),
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

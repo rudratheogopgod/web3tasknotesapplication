@@ -30,6 +30,7 @@ internal fun RecentlyAddedRow(
     onOpenNote: (Long) -> Unit,
     onSeeAll: () -> Unit,
     onRequestDelete: ((Long) -> Unit)?,
+    onTogglePin: ((Long) -> Unit)?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.Small)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -41,7 +42,8 @@ internal fun RecentlyAddedRow(
             items(notes, key = { it.id }) { note ->
                 Box(Modifier.width(160.dp)) {
                     NoteCard(note, onClick = { onOpenNote(note.id) },
-                        onDelete = onRequestDelete?.let { request -> { request(note.id) } })
+                        onDelete = onRequestDelete?.let { request -> { request(note.id) } },
+                        onTogglePin = onTogglePin?.let { toggle -> { toggle(note.id) } })
                 }
             }
         }

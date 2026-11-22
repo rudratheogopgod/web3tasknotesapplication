@@ -1,6 +1,8 @@
 package com.rudra.web3tasknotesapplication.ui.notes.list
 
 import androidx.lifecycle.SavedStateHandle
+import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
+import kotlinx.coroutines.flow.combine
 import androidx.lifecycle.ViewModel
 import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -80,6 +82,28 @@ internal class NotesListViewModel @Inject constructor(
             }
             emit(NotesListUiState.Unavailable)
         }
+    val category = savedState.getStateFlow<String?>("note_category", null)
+    val homeNotes = combine(uiState, category, query) { state, selected, search ->
+        if (state is NotesListUiState.Loaded && search.isBlank() && selected != null) {
+            NotesListUiState.Loaded(state.notes.filter { it.category.name == selected })
+        } else state
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotesListUiState.Loading)
+
+    fun selectCategory(value: NoteCategory?) {
+        savedState["note_category"] = value?.name
+    }
+
+    fun togglePin(id: Long) {
+        if (!writes.add(id)) return
+        viewModelScope.launch {
+            try {
+                if (repository.togglePin(id).isFailure) pending.update { it + DeleteMessage.PinFailed() }
+            } finally {
+                writes.remove(id)
+            }
+        }
+    }
+
     fun deleteNote(id: Long) {
         if (!writes.add(id)) return
         viewModelScope.launch {
@@ -114,4 +138,5 @@ internal sealed interface DeleteMessage {
     class Deleted(val note: Note) : DeleteMessage
     class DeleteFailed : DeleteMessage
     class RestoreFailed : DeleteMessage
+    class PinFailed : DeleteMessage
 }

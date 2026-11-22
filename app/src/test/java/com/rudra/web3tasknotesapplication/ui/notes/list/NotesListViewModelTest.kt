@@ -2,6 +2,7 @@ package com.rudra.web3tasknotesapplication.ui.notes.list
 
 import com.rudra.web3tasknotesapplication.data.repository.NotesRepository
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
 import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.Dispatchers
@@ -101,6 +102,27 @@ class NotesListViewModelTest {
         model.viewModelScope.cancel()
     }
 
+    @Test
+    fun categoryFiltersHomeButNotSearchAndReturnsWhenSearchClears() = runTest(dispatcher) {
+        val journal = Note(1, "Journal", "", 1, 1, category = NoteCategory.JOURNAL)
+        val quick = Note(2, "Quick", "", 2, 2)
+        val repository = FakeRepository().apply { notes.value = listOf(quick, journal) }
+        val model = NotesListViewModel(repository, SavedStateHandle())
+        backgroundScope.launch(dispatcher) { model.homeNotes.collect {} }
+        model.selectCategory(NoteCategory.JOURNAL)
+        testScheduler.runCurrent()
+        assertEquals(NotesListUiState.Loaded(listOf(journal)), model.homeNotes.value)
+        model.changeQuery("Quick")
+        testScheduler.runCurrent()
+        testScheduler.advanceTimeBy(250)
+        testScheduler.runCurrent()
+        assertEquals(listOf(quick, journal), (model.homeNotes.value as NotesListUiState.Loaded).notes)
+        model.changeQuery("")
+        testScheduler.runCurrent()
+        assertEquals(NotesListUiState.Loaded(listOf(journal)), model.homeNotes.value)
+        model.viewModelScope.cancel()
+    }
+
     private class FakeRepository : NotesRepository {
         val notes = MutableStateFlow(emptyList<Note>())
         var deleteCalls = 0
@@ -121,6 +143,7 @@ class NotesListViewModelTest {
             return Result.success(note)
         }
 
+        override suspend fun togglePin(id: Long): Result<Unit> = error("Pinning is not used by this fake")
         override suspend fun restore(note: Note): Result<Unit> {
             restoreCalls++
             notes.value = notes.value + note

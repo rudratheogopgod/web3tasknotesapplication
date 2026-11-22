@@ -125,6 +125,7 @@ class NoteEditorViewModelTest {
             return Result.success(Note(id ?: 1, title, content, 0, 0))
         }
         override suspend fun delete(id: Long): Result<Note> = error("Editor does not delete notes")
+        override suspend fun togglePin(id: Long): Result<Unit> = error("Pinning is not used by this fake")
         override suspend fun restore(note: Note): Result<Unit> = error("Undo is not used in this test")
     }
 }

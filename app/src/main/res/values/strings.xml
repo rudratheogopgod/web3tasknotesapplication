@@ -52,4 +52,10 @@
     <string name="note_color_sand">Sand</string>
     <string name="note_color_mint">Mint</string>
     <string name="note_color_lavender">Lavender</string>
+    <string name="notes_categories">Categories</string>
+    <string name="browse_categories">Browse</string>
+    <string name="category_all">All</string>
+    <string name="notes_pinned">Pinned</string>
+    <string name="category_empty">No notes in this category</string>
+    <string name="note_pin_failed">Couldn’t change pin status.</string>
 </resources>

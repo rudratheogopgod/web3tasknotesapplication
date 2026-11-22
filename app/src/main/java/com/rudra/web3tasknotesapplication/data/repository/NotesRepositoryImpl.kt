@@ -75,6 +75,15 @@ class NotesRepositoryImpl @Inject constructor(
         dao.insert(note.toEntity())
     }
 
+    override suspend fun togglePin(id: Long): Result<Unit> = write {
+        database.withTransaction {
+            val existing = checkNotNull(dao.getById(id)).toNote()
+            val updated = rules.prepare(existing, existing.title, existing.content,
+                existing.options.copy(isPinned = !existing.isPinned))
+            check(dao.update(updated.toEntity()) == 1)
+        }
+    }
+
     private suspend fun <T> write(operation: suspend () -> T): Result<T> =
         withContext(dispatchers.io()) {
             try {

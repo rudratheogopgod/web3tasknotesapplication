@@ -3,7 +3,9 @@ package com.rudra.web3tasknotesapplication.ui.notes.list
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridScope
 import com.rudra.web3tasknotesapplication.domain.model.Note
+import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.rememberScrollState
@@ -46,7 +48,13 @@ internal fun NotesListScreen(
     recent: List<Note> = emptyList(),
     onSeeAll: (() -> Unit)? = null,
     onBackFromRecent: (() -> Unit)? = null,
+    category: NoteCategory? = null,
+    categoryCounts: Map<NoteCategory, Int> = emptyMap(),
+    onCategoryChange: (NoteCategory?) -> Unit = {},
+    onTogglePin: ((Long) -> Unit)? = null,
 ) {
+    var browseOpen by rememberSaveable { mutableStateOf(false) }
+    val showSections = query.isBlank() && onBackFromRecent == null
     val insets = WindowInsets.safeDrawing.union(WindowInsets.captionBar)
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -56,6 +64,7 @@ internal fun NotesListScreen(
             if (onBackFromRecent == null) FloatingActionButton(
                 onClick = onCreateNote,
                 shape = NotesShapes.Pill,
+                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {
@@ -84,6 +93,11 @@ internal fun NotesListScreen(
                     state, onCreateNote, onOpenNote, onRequestDelete, { onQueryChange("") },
                     recent = if (query.isBlank()) recent else emptyList(), onSeeAll = onSeeAll,
                     recentOnly = onBackFromRecent != null,
+                    showSections = showSections, onTogglePin = onTogglePin,
+                    categoryControls = {
+                        CategoryControls(category, categoryCounts, onCategoryChange,
+                            browseOpen, { browseOpen = it })
+                    },
                 )
             }
         }
@@ -100,6 +114,9 @@ private fun NotesListContent(
     recent: List<Note>,
     onSeeAll: (() -> Unit)?,
     recentOnly: Boolean,
+    showSections: Boolean,
+    onTogglePin: ((Long) -> Unit)?,
+    categoryControls: @Composable () -> Unit,
 ) {
     when (state) {
         NotesListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -125,14 +142,43 @@ private fun NotesListContent(
         ) {
             if (recent.isNotEmpty() && onSeeAll != null) {
                 item(key = "recently-added", span = StaggeredGridItemSpan.FullLine) {
-                    RecentlyAddedRow(recent, onOpenNote, onSeeAll, onRequestDelete)
+                    RecentlyAddedRow(recent, onOpenNote, onSeeAll, onRequestDelete, onTogglePin)
                 }
             }
-            items(state.notes, key = { it.id }) { note ->
-                NoteCard(note = note, onClick = { onOpenNote(note.id) },
-                    onDelete = onRequestDelete?.let { request -> { request(note.id) } })
+            if (showSections) {
+                item(key = "categories", span = StaggeredGridItemSpan.FullLine) { categoryControls() }
             }
+            val pinned = if (showSections) state.notes.filter(Note::isPinned) else emptyList()
+            val remaining = if (showSections) state.notes.filterNot(Note::isPinned) else state.notes
+            if (pinned.isNotEmpty()) {
+                item(key = "pinned", span = StaggeredGridItemSpan.FullLine) {
+                    Text(stringResource(R.string.notes_pinned), style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            if (state.notes.isEmpty()) {
+                item(key = "category-empty", span = StaggeredGridItemSpan.FullLine) {
+                    Text(stringResource(R.string.category_empty), Modifier.padding(vertical = Spacing.Medium))
+                }
+            }
+            noteItems(pinned, onOpenNote, onRequestDelete, onTogglePin)
+            if (pinned.isNotEmpty() && remaining.isNotEmpty()) {
+                item(key = "pinned-end", span = StaggeredGridItemSpan.FullLine) { Spacer(Modifier.height(1.dp)) }
+            }
+            noteItems(remaining, onOpenNote, onRequestDelete, onTogglePin)
         }
+    }
+}
+
+private fun LazyStaggeredGridScope.noteItems(
+    notes: List<Note>,
+    onOpenNote: (Long) -> Unit,
+    onRequestDelete: ((Long) -> Unit)?,
+    onTogglePin: ((Long) -> Unit)?,
+) {
+    items(notes, key = { it.id }) { note ->
+        NoteCard(note = note, onClick = { onOpenNote(note.id) },
+            onDelete = onRequestDelete?.let { request -> { request(note.id) } },
+            onTogglePin = onTogglePin?.let { toggle -> { toggle(note.id) } })
     }
 }
 

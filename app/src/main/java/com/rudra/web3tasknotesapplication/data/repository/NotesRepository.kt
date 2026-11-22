@@ -25,4 +25,6 @@ interface NotesRepository {
 
     /** Reinserts a deleted note with its original identity and timestamps. */
     suspend fun restore(note: Note): Result<Unit>
+
+    suspend fun togglePin(id: Long): Result<Unit>
 }

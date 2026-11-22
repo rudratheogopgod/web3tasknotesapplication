@@ -4,7 +4,17 @@ import android.text.format.DateFormat
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -33,7 +43,7 @@ import java.util.Date
 
 /** Shows the most recent edit and a bounded excerpt without changing the note text. */
 @Composable
-internal fun NoteCard(note: Note, onClick: () -> Unit, onDelete: (() -> Unit)? = null) {
+internal fun NoteCard(note: Note, onClick: () -> Unit, onDelete: (() -> Unit)? = null, onTogglePin: (() -> Unit)? = null) {
     val palette = LocalNoteColors.current
     var menuOpen by remember { mutableStateOf(false) }
     val actionsLabel = stringResource(R.string.note_actions)
@@ -47,8 +57,14 @@ internal fun NoteCard(note: Note, onClick: () -> Unit, onDelete: (() -> Unit)? =
             Column(Modifier.padding(Spacing.Medium), verticalArrangement = Arrangement.spacedBy(Spacing.ExtraSmall)) {
                 Text(noteDateLabel(note.updatedAt), style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(note.title, style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.ExtraSmall)) {
+                    Text(note.title, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (note.isPinned) {
+                        Icon(painterResource(R.drawable.ic_note_pin), stringResource(R.string.notes_pinned),
+                            modifier = Modifier.size(16.dp))
+                    }
+                }
                 if (note.content.isNotBlank()) {
                     Text(note.content, style = MaterialTheme.typography.bodyMedium,
                         maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -56,6 +72,10 @@ internal fun NoteCard(note: Note, onClick: () -> Unit, onDelete: (() -> Unit)? =
             }
             if (onDelete != null) {
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (onTogglePin != null) DropdownMenuItem(
+                        text = { Text(stringResource(if (note.isPinned) R.string.unpin_note else R.string.pin_note)) },
+                        onClick = { menuOpen = false; onTogglePin() },
+                    )
                     DropdownMenuItem(text = { Text(stringResource(R.string.delete_note)) }, onClick = {
                         menuOpen = false
                         onDelete()
