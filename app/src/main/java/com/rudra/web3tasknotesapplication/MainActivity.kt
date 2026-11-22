@@ -16,7 +16,10 @@ import com.rudra.web3tasknotesapplication.domain.model.ThemeMode
 import com.rudra.web3tasknotesapplication.ui.theme.Web3TaskNotesTheme
 import com.rudra.web3tasknotesapplication.ui.theme.isDarkTheme
 
+import dagger.hilt.android.AndroidEntryPoint
+
 /** Hosts the Compose app and keeps the window appearance aligned with its theme. */
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()

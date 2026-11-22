@@ -2,6 +2,9 @@ package com.rudra.web3tasknotesapplication.data.repository
 
 import android.content.Context
 import androidx.room.withTransaction
+import com.rudra.web3tasknotesapplication.data.local.NoteDao
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import com.rudra.web3tasknotesapplication.R
 import com.rudra.web3tasknotesapplication.core.dispatchers.DispatcherProvider
 import com.rudra.web3tasknotesapplication.core.time.TimeProvider
@@ -14,13 +17,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 /** Runs each read-and-write save in one transaction so comparisons use the latest row. */
-class NotesRepositoryImpl(
+class NotesRepositoryImpl @Inject constructor(
+    private val dao: NoteDao,
     private val database: NotesDatabase,
     private val dispatchers: DispatcherProvider,
     time: TimeProvider,
-    context: Context,
+    @ApplicationContext context: Context,
 ) : NotesRepository {
-    private val dao = database.noteDao()
     private val appContext = context.applicationContext
     private val rules = NoteSaveRules(time) { appContext.getString(R.string.untitled_note) }
 
