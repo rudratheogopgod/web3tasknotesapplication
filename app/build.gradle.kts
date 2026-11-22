@@ -29,7 +29,6 @@ android {
         release {
             optimization {
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
     }
@@ -44,6 +43,15 @@ android {
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+tasks.register<Copy>("stageDebugApk") {
+    group = "distribution"
+    description = "Stages the installable debug APK for delivery."
+    dependsOn("assembleDebug")
+    from(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk"))
+    into(rootProject.layout.projectDirectory.dir("release"))
+    rename { "CoolNotes-debug.apk" }
 }
 
 dependencies {

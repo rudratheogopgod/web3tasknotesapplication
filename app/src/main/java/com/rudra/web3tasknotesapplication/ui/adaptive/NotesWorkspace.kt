@@ -1,5 +1,6 @@
 package com.rudra.web3tasknotesapplication.ui.adaptive
 
+import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.rememberScrollState
@@ -52,7 +53,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.core.os.bundleOf
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
@@ -88,7 +88,9 @@ internal fun NotesWorkspace(
     val selection = navigator.currentDestination?.contentKey
     val noteId = selection?.toLongOrNull()
     val editor = if (selection != null) key(selection) {
-        val args = remember(noteId) { if (noteId == null) bundleOf() else bundleOf(EDITOR_NOTE_ID to noteId) }
+        val args = remember(noteId) {
+            Bundle().apply { noteId?.let { putLong(EDITOR_NOTE_ID, it) } }
+        }
         val owner = rememberViewModelStoreOwner(defaultArgs = args)
         hiltViewModel<NoteEditorViewModel>(owner, key = selection)
     } else null
@@ -236,10 +238,15 @@ internal fun EmptyDetailPane(onCreate: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(Spacing.Medium, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null,
-            modifier = Modifier.size(Spacing.DoubleExtraLarge))
+        Icon(
+            painterResource(R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier.size(Spacing.DoubleExtraLarge),
+            tint = MaterialTheme.colorScheme.onBackground,
+        )
         Text(
             stringResource(R.string.select_or_create_note),
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.titleMedium,
         )
