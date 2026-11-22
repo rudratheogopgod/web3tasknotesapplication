@@ -2,6 +2,8 @@ package com.rudra.web3tasknotesapplication.ui.notes.list
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import com.rudra.web3tasknotesapplication.domain.model.Note
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.rememberScrollState
@@ -41,6 +43,9 @@ internal fun NotesListScreen(
     sortOrder: NoteSortOrder = NoteSortOrder.LAST_UPDATED,
     onQueryChange: (String) -> Unit = {},
     onSortOrderChange: (NoteSortOrder) -> Unit = {},
+    recent: List<Note> = emptyList(),
+    onSeeAll: (() -> Unit)? = null,
+    onBackFromRecent: (() -> Unit)? = null,
 ) {
     val insets = WindowInsets.safeDrawing.union(WindowInsets.captionBar)
     Scaffold(
@@ -48,7 +53,7 @@ internal fun NotesListScreen(
         contentWindowInsets = insets,
         snackbarHost = { snackbarHostState?.let { SnackbarHost(it) } },
         floatingActionButton = {
-            FloatingActionButton(
+            if (onBackFromRecent == null) FloatingActionButton(
                 onClick = onCreateNote,
                 shape = NotesShapes.Pill,
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -59,19 +64,27 @@ internal fun NotesListScreen(
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
-            NotesHeader(sortOrder, onSortOrderChange)
-            NotesSearchBar(
+            if (onBackFromRecent != null) {
+                RecentScreenHeader(onBackFromRecent)
+            } else {
+                NotesHeader(sortOrder, onSortOrderChange)
+                NotesSearchBar(
                 query = query,
                 onQueryChange = onQueryChange,
                 modifier = Modifier.align(Alignment.CenterHorizontally).widthIn(max = 640.dp)
                     .fillMaxWidth().padding(horizontal = Spacing.Large).padding(bottom = Spacing.Large),
-            )
+                )
+            }
             Surface(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 shape = NotesShapes.Sheet,
                 color = MaterialTheme.colorScheme.surface,
             ) {
-                NotesListContent(state, onCreateNote, onOpenNote, onRequestDelete, { onQueryChange("") })
+                NotesListContent(
+                    state, onCreateNote, onOpenNote, onRequestDelete, { onQueryChange("") },
+                    recent = if (query.isBlank()) recent else emptyList(), onSeeAll = onSeeAll,
+                    recentOnly = onBackFromRecent != null,
+                )
             }
         }
     }
@@ -84,12 +97,19 @@ private fun NotesListContent(
     onOpenNote: (Long) -> Unit,
     onRequestDelete: ((Long) -> Unit)?,
     onClearSearch: () -> Unit,
+    recent: List<Note>,
+    onSeeAll: (() -> Unit)?,
+    recentOnly: Boolean,
 ) {
     when (state) {
         NotesListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
-        NotesListUiState.Empty -> EmptyNotes(onCreateNote)
+        NotesListUiState.Empty -> if (recentOnly) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.notes_empty_title))
+            }
+        } else EmptyNotes(onCreateNote)
         is NotesListUiState.NoResults -> NoResults(state.query, onClearSearch)
         NotesListUiState.Unavailable -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.notes_unavailable), Modifier.padding(Spacing.Large))
@@ -98,11 +118,16 @@ private fun NotesListContent(
             columns = StaggeredGridCells.Adaptive(MinimumCardWidth),
             contentPadding = PaddingValues(
                 start = Spacing.Large, end = Spacing.Large,
-                top = Spacing.Large, bottom = FabClearance,
+                top = Spacing.Large, bottom = if (recentOnly) Spacing.Large else FabClearance,
             ),
             horizontalArrangement = Arrangement.spacedBy(Spacing.Medium),
             verticalItemSpacing = Spacing.Medium,
         ) {
+            if (recent.isNotEmpty() && onSeeAll != null) {
+                item(key = "recently-added", span = StaggeredGridItemSpan.FullLine) {
+                    RecentlyAddedRow(recent, onOpenNote, onSeeAll, onRequestDelete)
+                }
+            }
             items(state.notes, key = { it.id }) { note ->
                 NoteCard(note = note, onClick = { onOpenNote(note.id) },
                     onDelete = onRequestDelete?.let { request -> { request(note.id) } })

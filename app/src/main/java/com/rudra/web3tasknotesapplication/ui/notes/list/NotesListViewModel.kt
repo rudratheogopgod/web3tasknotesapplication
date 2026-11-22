@@ -36,6 +36,12 @@ internal class NotesListViewModel @Inject constructor(
     val sortOrder = orderName.map(NoteSortOrder::valueOf)
         .stateIn(viewModelScope, SharingStarted.Eagerly, NoteSortOrder.valueOf(orderName.value))
 
+    val recent = loadedState(flow { emitAll(repository.observeCreated(10)) })
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotesListUiState.Loading)
+
+    val allRecent = loadedState(flow { emitAll(repository.observeCreated()) })
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotesListUiState.Loading)
+
     fun changeQuery(value: String) {
         savedState["search_query"] = value
     }
@@ -57,7 +63,10 @@ internal class NotesListViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotesListUiState.Loading)
 
     private fun observeResults(term: String, order: NoteSortOrder) =
-        repository.observeAll(term, order).map { notes ->
+        loadedState(repository.observeAll(term, order), term)
+
+    private fun loadedState(notesFlow: kotlinx.coroutines.flow.Flow<List<Note>>, term: String = "") =
+        notesFlow.map { notes ->
             val state: NotesListUiState = when {
                 notes.isNotEmpty() -> NotesListUiState.Loaded(notes)
                 term.isNotEmpty() -> NotesListUiState.NoResults(term)

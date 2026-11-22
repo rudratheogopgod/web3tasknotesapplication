@@ -35,14 +35,16 @@ class NotesHomeTest {
         val viewModel = NotesListViewModel(repository, SavedStateHandle())
         try {
             compose.setContent {
-                Web3TaskNotesTheme { NotesListRoute({}, {}, viewModel) }
+                Web3TaskNotesTheme { NotesListRoute({}, {}, viewModel, onSeeAll = {}) }
             }
             awaitText("No notes yet")
             runBlocking { repository.save(null, "Weekend plans", "Pick up groceries").getOrThrow() }
             awaitText("Weekend plans")
-            compose.onNodeWithText("Pick up groceries").assertIsDisplayed()
+            awaitText("Recently added")
+            awaitText("Pick up groceries")
             compose.onNodeWithText("Search notes …").performTextInput("missing")
             awaitText("No notes match “missing”")
+            compose.onNodeWithText("Recently added").assertDoesNotExist()
             compose.onNodeWithText("Create your first note").assertDoesNotExist()
             compose.onNodeWithContentDescription("Clear search").performClick()
             awaitText("Weekend plans")
@@ -56,6 +58,6 @@ class NotesHomeTest {
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(androidx.compose.ui.test.hasText(text)).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText(text).assertIsDisplayed()
+        compose.onAllNodes(androidx.compose.ui.test.hasText(text))[0].assertIsDisplayed()
     }
 }

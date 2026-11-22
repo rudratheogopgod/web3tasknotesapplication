@@ -40,6 +40,17 @@ class NoteDaoTest {
         assertEquals(listOf(decoy, body, second, first, older), dao.observeAll().first().map { it.id })
     }
 
+    @Test
+    fun recentNotesAreLimitedAndEditsDoNotChangeCreationOrder() = runTest {
+        val ids = (1L..12L).map { day ->
+            dao.insert(NoteEntity(title = "Note $day", content = "", createdAt = day, updatedAt = day))
+        }
+        val oldest = checkNotNull(dao.getById(ids.first()))
+        dao.update(oldest.copy(updatedAt = 100))
+        assertEquals(ids.takeLast(10).reversed(), dao.observeCreated(10).first().map { it.id })
+        assertEquals(ids.reversed(), dao.observeCreated(-1).first().map { it.id })
+    }
+
     @After
     fun closeDatabase() = database.close()
 

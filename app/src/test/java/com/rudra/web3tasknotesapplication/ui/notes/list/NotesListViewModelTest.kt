@@ -109,6 +109,7 @@ class NotesListViewModelTest {
             queries += query to order
             return notes
         }
+        override fun observeCreated(limit: Int) = error("Creation order is not used by this test")
         override fun observeById(id: Long) = error("Only list observation is used")
         override suspend fun save(id: Long?, title: String, content: String): Result<Note> =
             error("Only list observation is used")

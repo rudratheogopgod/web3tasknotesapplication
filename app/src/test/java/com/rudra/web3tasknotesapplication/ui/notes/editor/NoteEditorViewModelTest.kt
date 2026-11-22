@@ -86,6 +86,7 @@ class NoteEditorViewModelTest {
         var saves = 0
         val finishSave = CompletableDeferred<Unit>()
         override fun observeAll(query: String, order: NoteSortOrder) = flowOf(listOfNotNull(note))
+        override fun observeCreated(limit: Int) = error("Creation order is not used by this test")
         override fun observeById(id: Long) = flowOf(note?.takeIf { it.id == id })
         override suspend fun save(id: Long?, title: String, content: String): Result<Note> {
             if (title.isBlank() && content.isBlank()) return Result.failure(BlankNoteException())

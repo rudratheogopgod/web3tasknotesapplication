@@ -24,8 +24,15 @@ internal fun NotesListRoute(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     confirmedEditorDeleteId: Long? = null,
     onEditorDeleteConsumed: () -> Unit = {},
+    onSeeAll: (() -> Unit)? = null,
+    onBackFromRecent: (() -> Unit)? = null,
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val state by (if (onBackFromRecent == null) viewModel.uiState else viewModel.allRecent)
+        .collectAsStateWithLifecycle()
+    val recent = if (onBackFromRecent == null && onSeeAll != null) {
+        val recentState by viewModel.recent.collectAsStateWithLifecycle()
+        (recentState as? NotesListUiState.Loaded)?.notes.orEmpty()
+    } else emptyList()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val order by viewModel.sortOrder.collectAsStateWithLifecycle()
     var confirmId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -38,7 +45,8 @@ internal fun NotesListRoute(
     DeleteSnackbar(viewModel, snackbarHostState)
     NotesListScreen(state, onCreateNote, onOpenNote, snackbarHostState,
         onRequestDelete = { confirmId = it }, query = query, sortOrder = order,
-        onQueryChange = viewModel::changeQuery, onSortOrderChange = viewModel::changeSortOrder)
+        onQueryChange = viewModel::changeQuery, onSortOrderChange = viewModel::changeSortOrder, recent = recent,
+        onSeeAll = onSeeAll, onBackFromRecent = onBackFromRecent)
     confirmId?.let { id ->
         DeleteNoteDialog(
             onConfirm = {

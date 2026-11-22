@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.Flow
 /** Exposes Room-backed state without exposing persistence types to callers. */
 interface NotesRepository {
     fun observeAll(query: String = "", order: NoteSortOrder = NoteSortOrder.LAST_UPDATED): Flow<List<Note>>
+    /** Emits notes newest by creation time. An omitted limit returns every note. */
+    fun observeCreated(limit: Int = -1): Flow<List<Note>>
     fun observeById(id: Long): Flow<Note?>
 
     /** Saves a new note when [id] is null, or updates an existing note atomically. */

@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -19,6 +20,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 internal data object Home
+
+@Serializable
+internal data object RecentNotes
 
 /** A null ID opens a fresh draft. Existing notes are loaded by ID. */
 @Serializable
@@ -35,28 +39,17 @@ internal fun NotesNavHost() {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = Home) {
         composable<Home> { entry ->
-            val snackbar = remember { SnackbarHostState() }
-            val deleteId by entry.savedStateHandle.getStateFlow<Long?>(EDITOR_DELETE_ID, null)
-                .collectAsStateWithLifecycle()
-            val result by entry.savedStateHandle.getStateFlow<String?>(EDITOR_RESULT, null)
-                .collectAsStateWithLifecycle()
-            val message = when (result) {
-                EditorEffect.SAVED.name -> stringResource(R.string.note_saved)
-                EditorEffect.NOT_FOUND.name -> stringResource(R.string.note_not_found)
-                else -> null
-            }
-            LaunchedEffect(message) {
-                if (message != null) {
-                    snackbar.showSnackbar(message)
-                    entry.savedStateHandle[EDITOR_RESULT] = null
-                }
-            }
-            NotesListRoute(
+            NotesDestination(entry,
                 onCreateNote = { navController.navigate(Editor()) { launchSingleTop = true } },
                 onOpenNote = { id -> navController.navigate(Editor(id)) { launchSingleTop = true } },
-                snackbarHostState = snackbar,
-                confirmedEditorDeleteId = deleteId,
-                onEditorDeleteConsumed = { entry.savedStateHandle[EDITOR_DELETE_ID] = null },
+                onSeeAll = { navController.navigate(RecentNotes) { launchSingleTop = true } },
+            )
+        }
+        composable<RecentNotes> { entry ->
+            NotesDestination(entry,
+                onCreateNote = { navController.navigate(Editor()) { launchSingleTop = true } },
+                onOpenNote = { id -> navController.navigate(Editor(id)) { launchSingleTop = true } },
+                onBackFromRecent = { navController.popBackStack() },
             )
         }
         composable<Editor> { entry ->
@@ -75,4 +68,39 @@ internal fun NotesNavHost() {
             })
         }
     }
+}
+
+@Composable
+private fun NotesDestination(
+    entry: NavBackStackEntry,
+    onCreateNote: () -> Unit,
+    onOpenNote: (Long) -> Unit,
+    onSeeAll: (() -> Unit)? = null,
+    onBackFromRecent: (() -> Unit)? = null,
+) {
+    val snackbar = remember { SnackbarHostState() }
+    val deleteId by entry.savedStateHandle.getStateFlow<Long?>(EDITOR_DELETE_ID, null)
+        .collectAsStateWithLifecycle()
+    val result by entry.savedStateHandle.getStateFlow<String?>(EDITOR_RESULT, null)
+        .collectAsStateWithLifecycle()
+    val message = when (result) {
+        EditorEffect.SAVED.name -> stringResource(R.string.note_saved)
+        EditorEffect.NOT_FOUND.name -> stringResource(R.string.note_not_found)
+        else -> null
+    }
+    LaunchedEffect(message) {
+        if (message != null) {
+            snackbar.showSnackbar(message)
+            entry.savedStateHandle[EDITOR_RESULT] = null
+        }
+    }
+    NotesListRoute(
+        onCreateNote = onCreateNote,
+        onOpenNote = onOpenNote,
+        onSeeAll = onSeeAll,
+        onBackFromRecent = onBackFromRecent,
+        snackbarHostState = snackbar,
+        confirmedEditorDeleteId = deleteId,
+        onEditorDeleteConsumed = { entry.savedStateHandle[EDITOR_DELETE_ID] = null },
+    )
 }

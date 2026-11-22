@@ -24,6 +24,9 @@ interface NoteDao {
     """)
     fun observeByTitle(pattern: String?): Flow<List<NoteEntity>>
 
+    @Query("SELECT * FROM notes ORDER BY createdAt DESC, id DESC LIMIT :limit")
+    fun observeCreated(limit: Int): Flow<List<NoteEntity>>
+
     @Query("SELECT * FROM notes WHERE id = :id")
     fun observeById(id: Long): Flow<NoteEntity?>
 

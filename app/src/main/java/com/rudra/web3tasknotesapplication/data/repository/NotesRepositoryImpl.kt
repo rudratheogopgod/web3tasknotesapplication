@@ -38,6 +38,8 @@ class NotesRepositoryImpl @Inject constructor(
         return rows.map { entities -> entities.map { it.toNote() } }
     }
 
+    override fun observeCreated(limit: Int) = dao.observeCreated(limit).map { rows -> rows.map { it.toNote() } }
+
     override fun observeById(id: Long) = dao.observeById(id).map { it?.toNote() }
 
     override suspend fun save(id: Long?, title: String, content: String): Result<Note> = write {

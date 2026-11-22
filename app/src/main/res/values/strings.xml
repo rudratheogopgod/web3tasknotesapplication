@@ -39,4 +39,6 @@
     <string name="sort_title">Title (A–Z)</string>
     <string name="notes_no_results">No notes match “%1$s”</string>
     <string name="notes_search_suggestion">Try a different search or clear the field.</string>
+    <string name="recently_added">Recently added</string>
+    <string name="see_all_recent">See all</string>
 </resources>
