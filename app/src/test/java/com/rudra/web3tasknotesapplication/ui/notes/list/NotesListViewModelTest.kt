@@ -1,50 +1,42 @@
 package com.rudra.web3tasknotesapplication.ui.notes.list
 
+import app.cash.turbine.test
 import com.rudra.web3tasknotesapplication.data.repository.NotesRepository
 import com.rudra.web3tasknotesapplication.domain.model.Note
 import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
 import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
-import kotlinx.coroutines.Dispatchers
+import com.rudra.web3tasknotesapplication.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotesListViewModelTest {
-    private val dispatcher = StandardTestDispatcher()
-
-    @Before fun setUp() = Dispatchers.setMain(dispatcher)
-    @After fun tearDown() = Dispatchers.resetMain()
+    @get:Rule
+    val mainDispatcher = MainDispatcherRule()
+    private val dispatcher get() = mainDispatcher.dispatcher
 
     @Test
     fun transitionsFromLoadingToEmptyToLoadedAndBack() = runTest(dispatcher) {
         val repository = FakeRepository()
         val viewModel = NotesListViewModel(repository, SavedStateHandle())
-        assertEquals(NotesListUiState.Loading, viewModel.uiState.value)
-        backgroundScope.launch(dispatcher) { viewModel.uiState.collect {} }
-        testScheduler.runCurrent()
-        assertEquals(NotesListUiState.Empty, viewModel.uiState.value)
-
-        val notes = listOf(Note(2, "Newest", "Preview", 1, 3), Note(1, "Older", "", 1, 2))
-        repository.notes.value = notes
-        testScheduler.runCurrent()
-        assertEquals(NotesListUiState.Loaded(notes), viewModel.uiState.value)
-
-        repository.notes.value = emptyList()
-        testScheduler.runCurrent()
-        assertEquals(NotesListUiState.Empty, viewModel.uiState.value)
+        viewModel.uiState.test {
+            assertEquals(NotesListUiState.Loading, awaitItem())
+            assertEquals(NotesListUiState.Empty, awaitItem())
+            val notes = listOf(Note(2, "Newest", "Preview", 1, 3), Note(1, "Older", "", 1, 2))
+            repository.notes.value = notes
+            assertEquals(NotesListUiState.Loaded(notes), awaitItem())
+            repository.notes.value = emptyList()
+            assertEquals(NotesListUiState.Empty, awaitItem())
+        }
         viewModel.viewModelScope.cancel()
     }
 

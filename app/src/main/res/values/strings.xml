@@ -3,6 +3,8 @@
     <string name="untitled_note">Untitled note</string>
     <string name="all_notes">All notes</string>
     <string name="create_note">Create note</string>
+    <string name="select_or_create_note">Select a note or create a new one</string>
+    <string name="editor_options">Note options</string>
     <string name="create_first_note">Create your first note</string>
     <string name="notes_empty_title">No notes yet</string>
     <string name="notes_empty_body">Save a thought, a list, or anything you want to remember.</string>

@@ -1,6 +1,7 @@
 package com.rudra.web3tasknotesapplication.ui.notes.editor
 
 import androidx.lifecycle.SavedStateHandle
+import app.cash.turbine.test
 import androidx.lifecycle.viewModelScope
 import com.rudra.web3tasknotesapplication.data.repository.BlankNoteException
 import com.rudra.web3tasknotesapplication.data.repository.NotesRepository
@@ -10,27 +11,22 @@ import com.rudra.web3tasknotesapplication.domain.model.NoteColor
 import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.domain.model.NoteSortOrder
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
+import com.rudra.web3tasknotesapplication.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.*
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NoteEditorViewModelTest {
-    private val dispatcher = StandardTestDispatcher()
-
-    @Before fun setUp() = Dispatchers.setMain(dispatcher)
-    @After fun tearDown() = Dispatchers.resetMain()
+    @get:Rule
+    val mainDispatcher = MainDispatcherRule()
+    private val dispatcher get() = mainDispatcher.dispatcher
 
     @Test fun rejectsBlankAndPreventsDuplicateSaveWhileWriting() = runTest(dispatcher) {
         val repository = FakeRepository()
@@ -81,7 +77,9 @@ class NoteEditorViewModelTest {
 
     @Test fun missingIdReturnsToHome() = runTest(dispatcher) {
         val model = NoteEditorViewModel(SavedStateHandle(mapOf("noteId" to 9L)), FakeRepository())
-        assertEquals(EditorEffect.NOT_FOUND, model.effects.first())
+        model.effects.test {
+            assertEquals(EditorEffect.NOT_FOUND, awaitItem())
+        }
         model.viewModelScope.cancel()
     }
 

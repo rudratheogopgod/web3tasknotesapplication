@@ -20,13 +20,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.rudra.web3tasknotesapplication.R
+import com.rudra.web3tasknotesapplication.ui.adaptive.NotesWindowLayout
 import com.rudra.web3tasknotesapplication.domain.model.Note
 import com.rudra.web3tasknotesapplication.ui.components.NoteCard
 import com.rudra.web3tasknotesapplication.ui.theme.Spacing
-
-private val RecentCardWidth = 160.dp
 
 @Composable
 internal fun RecentlyAddedRow(
@@ -35,6 +33,7 @@ internal fun RecentlyAddedRow(
     onSeeAll: () -> Unit,
     onRequestDelete: ((Long) -> Unit)?,
     onTogglePin: ((Long) -> Unit)?,
+    selectedNoteId: Long? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.Small)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -44,8 +43,9 @@ internal fun RecentlyAddedRow(
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.Medium)) {
             items(notes, key = { it.id }) { note ->
-                Box(Modifier.width(RecentCardWidth)) {
+                Box(Modifier.width(NotesWindowLayout.RecentCardWidth)) {
                     NoteCard(note, onClick = { onOpenNote(note.id) },
+                        isSelected = note.id == selectedNoteId,
                         onDelete = onRequestDelete?.let { request -> { request(note.id) } },
                         onTogglePin = onTogglePin?.let { toggle -> { toggle(note.id) } })
                 }

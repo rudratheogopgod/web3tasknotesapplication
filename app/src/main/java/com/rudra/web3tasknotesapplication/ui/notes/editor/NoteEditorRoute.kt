@@ -2,6 +2,7 @@ package com.rudra.web3tasknotesapplication.ui.notes.editor
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,14 +10,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.rudra.web3tasknotesapplication.ui.components.DeleteNoteDialog
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 internal fun NoteEditorRoute(
     onResult: (EditorEffect) -> Unit,
     onDelete: (Long) -> Unit,
-    viewModel: NoteEditorViewModel = hiltViewModel(),
+    viewModel: NoteEditorViewModel,
+    showBack: Boolean = true,
+    compactHeight: Boolean = false,
+    tabletopHinge: Rect? = null,
+    onKeepEditing: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
@@ -34,7 +38,13 @@ internal fun NoteEditorRoute(
         onBack = viewModel::requestBack,
         onSave = viewModel::save,
         onDiscard = viewModel::discard,
-        onKeepEditing = viewModel::keepEditing,
+        onKeepEditing = {
+            viewModel.keepEditing()
+            onKeepEditing()
+        },
+        showBack = showBack,
+        compactHeight = compactHeight,
+        tabletopHinge = tabletopHinge,
         onRequestDelete = { confirmDelete = true },
     )
     if (confirmDelete) {

@@ -14,6 +14,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -23,6 +25,8 @@ import com.rudra.web3tasknotesapplication.ui.components.NotesSearchBar
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import com.rudra.web3tasknotesapplication.ui.adaptive.NotesWindowLayout
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -43,7 +47,6 @@ import com.rudra.web3tasknotesapplication.ui.components.NoteCard
 import com.rudra.web3tasknotesapplication.ui.theme.NotesShapes
 import com.rudra.web3tasknotesapplication.ui.theme.Spacing
 
-private val MinimumCardWidth = 152.dp
 private val FabClearance = 72.dp
 private val EmptyIllustrationMinHeight = 240.dp
 
@@ -66,11 +69,15 @@ internal fun NotesListScreen(
     categoryCounts: Map<NoteCategory, Int> = emptyMap(),
     onCategoryChange: (NoteCategory?) -> Unit = {},
     onTogglePin: ((Long) -> Unit)? = null,
+    selectedNoteId: Long? = null,
+    focusSearchRequest: Int = 0,
+    compactHeight: Boolean = false,
 ) {
     var browseOpen by rememberSaveable { mutableStateOf(false) }
     val showSections = query.isBlank() && onBackFromRecent == null
     val insets = WindowInsets.safeDrawing.union(WindowInsets.captionBar)
     val gridState = rememberLazyStaggeredGridState()
+    val searchFocus = remember { FocusRequester() }
     val focus = LocalFocusManager.current
     val layoutDirection = LocalLayoutDirection.current
     val dismissKeyboardOnDrag = remember(focus) {
@@ -79,6 +86,29 @@ internal fun NotesListScreen(
                 if (source == NestedScrollSource.UserInput && available != Offset.Zero) focus.clearFocus()
                 return Offset.Zero
             }
+        }
+    }
+    val header: @Composable () -> Unit = {
+        if (onBackFromRecent != null) {
+            RecentScreenHeader(onBackFromRecent)
+        } else {
+            NotesHeader(sortOrder, onSortOrderChange, onOpenTheme, compactHeight)
+            NotesSearchBar(
+                query = query,
+                onQueryChange = onQueryChange,
+                modifier = Modifier.widthIn(max = NotesWindowLayout.SearchMaxWidth).fillMaxWidth()
+                    .padding(horizontal = Spacing.Large)
+                    .padding(bottom = if (compactHeight) Spacing.Small else Spacing.Large),
+                focusRequester = searchFocus,
+            )
+        }
+    }
+    val scrollHeader = compactHeight && state is NotesListUiState.Loaded
+    LaunchedEffect(focusSearchRequest) {
+        if (focusSearchRequest > 0 && onBackFromRecent == null) {
+            if (scrollHeader) gridState.scrollToItem(0)
+            withFrameNanos {}
+            searchFocus.requestFocus()
         }
     }
     Scaffold(
@@ -100,20 +130,11 @@ internal fun NotesListScreen(
         Column(
             Modifier.fillMaxSize().padding(padding.withoutBottom(layoutDirection))
                 .consumeWindowInsets(padding).nestedScroll(dismissKeyboardOnDrag),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (onBackFromRecent != null) {
-                RecentScreenHeader(onBackFromRecent)
-            } else {
-                NotesHeader(sortOrder, onSortOrderChange, onOpenTheme)
-                NotesSearchBar(
-                    query = query,
-                    onQueryChange = onQueryChange,
-                    modifier = Modifier.align(Alignment.CenterHorizontally).widthIn(max = 640.dp)
-                        .fillMaxWidth().padding(horizontal = Spacing.Large).padding(bottom = Spacing.Large),
-                )
-            }
+            if (!scrollHeader) header()
             Surface(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.widthIn(max = NotesWindowLayout.ListMaxWidth).fillMaxWidth().weight(1f),
                 shape = NotesShapes.Sheet,
                 color = MaterialTheme.colorScheme.surface,
             ) {
@@ -123,6 +144,8 @@ internal fun NotesListScreen(
                     recentOnly = onBackFromRecent != null,
                     showSections = showSections, onTogglePin = onTogglePin,
                     gridState = gridState, bottomInset = padding.calculateBottomPadding(),
+                    selectedNoteId = selectedNoteId,
+                    scrollingHeader = if (scrollHeader) header else null,
                     categoryControls = {
                         CategoryControls(category, onCategoryChange, onBrowse = { browseOpen = true })
                     },
@@ -156,6 +179,8 @@ private fun NotesListContent(
     onTogglePin: ((Long) -> Unit)?,
     gridState: LazyStaggeredGridState,
     bottomInset: Dp,
+    selectedNoteId: Long?,
+    scrollingHeader: (@Composable () -> Unit)?,
     categoryControls: @Composable () -> Unit,
 ) {
     val bottomPadding = bottomInset + if (recentOnly) Spacing.Large else FabClearance
@@ -173,7 +198,7 @@ private fun NotesListContent(
             Text(stringResource(R.string.notes_unavailable), Modifier.padding(Spacing.Large))
         }
         is NotesListUiState.Loaded -> LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive(MinimumCardWidth),
+            columns = StaggeredGridCells.Adaptive(NotesWindowLayout.CardMinWidth),
             state = gridState,
             contentPadding = PaddingValues(
                 start = Spacing.Large, end = Spacing.Large,
@@ -182,9 +207,16 @@ private fun NotesListContent(
             horizontalArrangement = Arrangement.spacedBy(Spacing.Medium),
             verticalItemSpacing = Spacing.Medium,
         ) {
+            if (scrollingHeader != null) {
+                item(key = "header", span = StaggeredGridItemSpan.FullLine) {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        scrollingHeader()
+                    }
+                }
+            }
             if (recent.isNotEmpty() && onSeeAll != null) {
                 item(key = "recently-added", span = StaggeredGridItemSpan.FullLine) {
-                    RecentlyAddedRow(recent, onOpenNote, onSeeAll, onRequestDelete, onTogglePin)
+                    RecentlyAddedRow(recent, onOpenNote, onSeeAll, onRequestDelete, onTogglePin, selectedNoteId)
                 }
             }
             if (showSections) {
@@ -203,11 +235,11 @@ private fun NotesListContent(
                     Text(stringResource(R.string.category_empty), Modifier.padding(vertical = Spacing.Medium))
                 }
             }
-            noteItems(pinned, onOpenNote, onRequestDelete, onTogglePin)
+            noteItems(pinned, onOpenNote, onRequestDelete, onTogglePin, selectedNoteId)
             if (pinned.isNotEmpty() && remaining.isNotEmpty()) {
                 item(key = "pinned-end", span = StaggeredGridItemSpan.FullLine) { Spacer(Modifier.height(1.dp)) }
             }
-            noteItems(remaining, onOpenNote, onRequestDelete, onTogglePin)
+            noteItems(remaining, onOpenNote, onRequestDelete, onTogglePin, selectedNoteId)
         }
     }
 }
@@ -217,9 +249,10 @@ private fun LazyStaggeredGridScope.noteItems(
     onOpenNote: (Long) -> Unit,
     onRequestDelete: ((Long) -> Unit)?,
     onTogglePin: ((Long) -> Unit)?,
+    selectedNoteId: Long?,
 ) {
     items(notes, key = { it.id }) { note ->
-        NoteCard(note = note, onClick = { onOpenNote(note.id) },
+        NoteCard(note = note, onClick = { onOpenNote(note.id) }, isSelected = note.id == selectedNoteId,
             onDelete = onRequestDelete?.let { request -> { request(note.id) } },
             onTogglePin = onTogglePin?.let { toggle -> { toggle(note.id) } })
     }
@@ -230,6 +263,7 @@ private fun NotesHeader(
     order: NoteSortOrder,
     onSortOrderChange: (NoteSortOrder) -> Unit,
     onOpenTheme: (() -> Unit)?,
+    compactHeight: Boolean,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     Row(
@@ -237,8 +271,9 @@ private fun NotesHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(stringResource(R.string.all_notes),
-            Modifier.weight(1f).padding(vertical = Spacing.Large).semantics { heading() },
-            style = MaterialTheme.typography.titleLarge)
+            Modifier.weight(1f).padding(vertical = if (compactHeight) Spacing.Small else Spacing.Large)
+                .semantics { heading() },
+            style = if (compactHeight) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge)
         Box {
             IconButton(onClick = { expanded = true }) {
                 Icon(painterResource(R.drawable.ic_notes_overflow), stringResource(R.string.notes_menu))

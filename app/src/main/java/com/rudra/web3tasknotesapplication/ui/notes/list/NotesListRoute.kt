@@ -23,11 +23,13 @@ internal fun NotesListRoute(
     onOpenNote: (Long) -> Unit,
     viewModel: NotesListViewModel = hiltViewModel(),
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
-    confirmedEditorDeleteId: Long? = null,
-    onEditorDeleteConsumed: () -> Unit = {},
     onSeeAll: (() -> Unit)? = null,
     onOpenTheme: (() -> Unit)? = null,
     onBackFromRecent: (() -> Unit)? = null,
+    selectedNoteId: Long? = null,
+    focusSearchRequest: Int = 0,
+    compactHeight: Boolean = false,
+    onNoteDeleted: (Long) -> Unit = {},
 ) {
     val state by (if (onBackFromRecent == null) viewModel.homeNotes else viewModel.allRecent)
         .collectAsStateWithLifecycle()
@@ -43,24 +45,22 @@ internal fun NotesListRoute(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val order by viewModel.sortOrder.collectAsStateWithLifecycle()
     var confirmId by rememberSaveable { mutableStateOf<Long?>(null) }
-    LaunchedEffect(confirmedEditorDeleteId) {
-        if (confirmedEditorDeleteId != null) {
-            viewModel.deleteNote(confirmedEditorDeleteId)
-            onEditorDeleteConsumed()
-        }
-    }
     DeleteSnackbar(viewModel, snackbarHostState)
     NotesListScreen(state, onCreateNote, onOpenNote, snackbarHostState,
         onRequestDelete = { confirmId = it }, query = query, sortOrder = order,
         onQueryChange = viewModel::changeQuery, onSortOrderChange = viewModel::changeSortOrder, recent = recent,
         onSeeAll = onSeeAll, onBackFromRecent = onBackFromRecent, onOpenTheme = onOpenTheme,
         category = category, categoryCounts = categoryCounts,
-        onCategoryChange = viewModel::selectCategory, onTogglePin = viewModel::togglePin)
+        onCategoryChange = viewModel::selectCategory, onTogglePin = viewModel::togglePin,
+        selectedNoteId = selectedNoteId, focusSearchRequest = focusSearchRequest, compactHeight = compactHeight)
     confirmId?.let { id ->
         DeleteNoteDialog(
             onConfirm = {
-                confirmId = null
-                viewModel.deleteNote(id)
+                if (confirmId == id) {
+                    confirmId = null
+                    viewModel.deleteNote(id)
+                    onNoteDeleted(id)
+                }
             },
             onCancel = { confirmId = null },
         )

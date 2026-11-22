@@ -1,6 +1,7 @@
 package com.rudra.web3tasknotesapplication.ui.components
 
 import android.text.format.DateFormat
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -30,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,6 +57,7 @@ internal fun NoteCard(
     onClick: () -> Unit,
     onDelete: (() -> Unit)? = null,
     onTogglePin: (() -> Unit)? = null,
+    isSelected: Boolean = false,
 ) {
     val palette = LocalNoteColors.current
     val haptics = LocalHapticFeedback.current
@@ -69,14 +76,28 @@ internal fun NoteCard(
         shape = NotesShapes.Card,
         color = palette.forNote(note.colorId),
         contentColor = palette.onColor,
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
     ) {
         Box(
-            Modifier.combinedClickable(
+            Modifier.pointerInput(onDelete != null) {
+                if (onDelete != null) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                                event.changes.forEach { it.consume() }
+                                menuOpen = true
+                            }
+                        }
+                    }
+                }
+            }.combinedClickable(
                 onClick = onClick,
                 onLongClickLabel = if (onDelete != null) actionsLabel else null,
                 onLongClick = onDelete?.let { { menuOpen = true } },
             ).semantics {
                 contentDescription = summary
+                if (isSelected) selected = true
                 if (note.isPinned) stateDescription = pinnedLabel
             },
         ) {

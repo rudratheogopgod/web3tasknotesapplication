@@ -15,6 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import com.rudra.web3tasknotesapplication.ui.adaptive.NotesWindowLayout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalDensity
@@ -30,7 +32,6 @@ import com.rudra.web3tasknotesapplication.domain.model.NoteOptions
 import com.rudra.web3tasknotesapplication.ui.components.noteDateLabel
 import com.rudra.web3tasknotesapplication.ui.theme.Spacing
 
-private val EditorMaxWidth = 720.dp
 private val CompactEditorHeight = 320.dp
 private const val CompactBodyMaxLines = 6
 
@@ -46,39 +47,51 @@ internal fun NoteEditorScreen(
     onKeepEditing: () -> Unit,
     onRequestDelete: (() -> Unit)? = null,
     onOptionsChange: (NoteOptions) -> Unit,
+    showBack: Boolean = true,
+    compactHeight: Boolean = false,
+    tabletopHinge: Rect? = null,
 ) {
     val fieldsEnabled = !state.isLoading && !state.isSaving && state.error != EditorError.LOAD_FAILED
     val keyboard = LocalSoftwareKeyboardController.current
-    val compactHeight = CompactEditorHeight * LocalDensity.current.fontScale.coerceAtLeast(1f)
+    val compactThreshold = CompactEditorHeight * LocalDensity.current.fontScale.coerceAtLeast(1f)
     val systemInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
-    Scaffold(
-        contentWindowInsets = systemInsets,
-        topBar = {
-            EditorToolbar(
-                state = state,
-                insets = systemInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
-                fieldsEnabled = fieldsEnabled,
-                onBack = {
-                    keyboard?.hide()
-                    onBack()
-                },
-                onSave = onSave,
-                onRequestDelete = onRequestDelete,
-                onOptionsChange = onOptionsChange,
-            )
-        },
-    ) { padding ->
-        BoxWithConstraints(
-            Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            when {
-                state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                state.error == EditorError.LOAD_FAILED -> Text(
-                    stringResource(R.string.note_load_failed), Modifier.padding(Spacing.Large),
+    if (tabletopHinge != null) {
+        TabletopEditor(
+            state, tabletopHinge, fieldsEnabled, showBack, onTitleChange, onContentChange,
+            onBack, onSave, onRequestDelete, onOptionsChange,
+        )
+    } else {
+        Scaffold(
+            contentWindowInsets = systemInsets,
+            topBar = {
+                EditorToolbar(
+                    state = state,
+                    insets = systemInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                    fieldsEnabled = fieldsEnabled,
+                    showBack = showBack,
+                    onBack = {
+                        keyboard?.hide()
+                        onBack()
+                    },
+                    onSave = onSave,
+                    onRequestDelete = onRequestDelete,
+                    onOptionsChange = onOptionsChange,
                 )
-                else -> EditorFields(state, onTitleChange, onContentChange, fieldsEnabled,
-                    compact = maxHeight < compactHeight, onOptionsChange = onOptionsChange)
+            },
+        ) { padding ->
+            BoxWithConstraints(
+                Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                when {
+                    state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    state.error == EditorError.LOAD_FAILED -> Text(
+                        stringResource(R.string.note_load_failed), Modifier.padding(Spacing.Large),
+                    )
+                    else -> EditorFields(state, onTitleChange, onContentChange, fieldsEnabled,
+                        compact = compactHeight || maxHeight < compactThreshold, onOptionsChange = onOptionsChange,
+                        collapseOptions = compactHeight)
+                }
             }
         }
     }
@@ -100,11 +113,61 @@ internal fun NoteEditorScreen(
     }
 }
 
+/** Uses the physical hinge as the boundary between text entry and the editor controls. */
+@Composable
+private fun TabletopEditor(
+    state: NoteEditorUiState,
+    hinge: Rect,
+    enabled: Boolean,
+    showBack: Boolean,
+    onTitleChange: (String) -> Unit,
+    onContentChange: (String) -> Unit,
+    onBack: () -> Unit,
+    onSave: () -> Unit,
+    onRequestDelete: (() -> Unit)?,
+    onOptionsChange: (NoteOptions) -> Unit,
+) {
+    val density = LocalDensity.current
+    val upperHeight = with(density) { hinge.top.toDp() }
+    val gapHeight = with(density) { hinge.height.toDp() }
+    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
+        Box(
+            Modifier.fillMaxWidth().height(upperHeight)
+                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            when {
+                state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                state.error == EditorError.LOAD_FAILED -> Text(stringResource(R.string.note_load_failed))
+                else -> EditorFields(
+                    state, onTitleChange, onContentChange, enabled, compact = true,
+                    onOptionsChange = onOptionsChange, showOptions = false,
+                )
+            }
+        }
+        Spacer(Modifier.height(gapHeight))
+        Column(
+            Modifier.fillMaxWidth().weight(1f).navigationBarsPadding().imePadding()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            EditorToolbar(
+                state, WindowInsets(0, 0, 0, 0), enabled, showBack,
+                onBack, onSave, onRequestDelete, onOptionsChange,
+            )
+            Box(Modifier.widthIn(max = NotesWindowLayout.EditorMaxWidth)
+                .fillMaxWidth().align(Alignment.CenterHorizontally).padding(Spacing.Large)) {
+                EditorNoteOptions(state.options, enabled, onOptionsChange)
+            }
+        }
+    }
+}
+
 @Composable
 private fun EditorToolbar(
     state: NoteEditorUiState,
     insets: WindowInsets,
     fieldsEnabled: Boolean,
+    showBack: Boolean,
     onBack: () -> Unit,
     onSave: () -> Unit,
     onRequestDelete: (() -> Unit)?,
@@ -114,8 +177,12 @@ private fun EditorToolbar(
         Modifier.fillMaxWidth().windowInsetsPadding(insets).padding(vertical = Spacing.ExtraSmall),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack, enabled = !state.isSaving) {
-            Icon(painterResource(R.drawable.ic_editor_back), stringResource(R.string.navigate_back))
+        if (showBack) {
+            IconButton(onClick = onBack, enabled = !state.isSaving) {
+                Icon(painterResource(R.drawable.ic_editor_back), stringResource(R.string.navigate_back))
+            }
+        } else {
+            Spacer(Modifier.width(Spacing.Large))
         }
         Text(
             stringResource(if (state.isNewNote) R.string.new_note else R.string.edit_note),
@@ -142,6 +209,8 @@ private fun EditorFields(
     enabled: Boolean,
     compact: Boolean,
     onOptionsChange: (NoteOptions) -> Unit,
+    collapseOptions: Boolean = false,
+    showOptions: Boolean = true,
 ) {
     val titleFocus = remember { FocusRequester() }
     val bodyFocus = remember { FocusRequester() }
@@ -155,7 +224,7 @@ private fun EditorFields(
         }
     }
     val scroll = rememberScrollState()
-    val form = Modifier.widthIn(max = EditorMaxWidth).fillMaxSize()
+    val form = Modifier.widthIn(max = NotesWindowLayout.EditorMaxWidth).fillMaxSize()
     Column(
         (if (compact) form.verticalScroll(scroll) else form).padding(Spacing.Large),
         verticalArrangement = Arrangement.spacedBy(Spacing.Small),
@@ -187,6 +256,16 @@ private fun EditorFields(
             maxLines = if (compact) CompactBodyMaxLines else Int.MAX_VALUE,
             enabled = enabled,
         )
-        EditorNoteOptions(state.options, enabled, onOptionsChange)
+        if (showOptions) {
+            var optionsOpen by rememberSaveable { mutableStateOf(false) }
+            if (collapseOptions) {
+                TextButton(onClick = { optionsOpen = !optionsOpen }, enabled = enabled) {
+                    Text(stringResource(R.string.editor_options))
+                }
+            }
+            if (!collapseOptions || optionsOpen) {
+                EditorNoteOptions(state.options, enabled, onOptionsChange)
+            }
+        }
     }
 }

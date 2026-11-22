@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.rudra.web3tasknotesapplication.R
+import com.rudra.web3tasknotesapplication.ui.adaptive.NotesWindowLayout
 import com.rudra.web3tasknotesapplication.domain.model.NoteCategory
 import com.rudra.web3tasknotesapplication.ui.theme.NotesShapes
 import com.rudra.web3tasknotesapplication.ui.theme.Spacing
@@ -35,7 +36,11 @@ internal fun CategoryControls(
                 style = MaterialTheme.typography.titleMedium)
             TextButton(onClick = onBrowse) { Text(stringResource(R.string.browse_categories)) }
         }
-        Surface(shape = NotesShapes.Pill, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Surface(
+            modifier = Modifier.widthIn(max = NotesWindowLayout.SegmentsMaxWidth).fillMaxWidth(),
+            shape = NotesShapes.Pill,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
             Row(Modifier.horizontalScroll(rememberScrollState()).selectableGroup().padding(Spacing.ExtraSmall)) {
                 CategoryOptions.forEach { option ->
                     val active = option == selected
@@ -65,7 +70,7 @@ internal fun CategoryPicker(
     onSelect: (NoteCategory?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetMaxWidth = NotesWindowLayout.SheetMaxWidth) {
         Column(
             Modifier.verticalScroll(rememberScrollState()).selectableGroup().padding(bottom = Spacing.Large),
         ) {
