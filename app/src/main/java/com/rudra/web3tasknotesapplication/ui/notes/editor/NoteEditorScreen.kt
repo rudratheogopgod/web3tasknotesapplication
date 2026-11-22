@@ -36,6 +36,7 @@ internal fun NoteEditorScreen(
     onSave: () -> Unit,
     onDiscard: () -> Unit,
     onKeepEditing: () -> Unit,
+    onRequestDelete: (() -> Unit)? = null,
 ) {
     val fieldsEnabled = !state.isLoading && !state.isSaving && state.error != EditorError.LOAD_FAILED
     Scaffold(
@@ -49,6 +50,11 @@ internal fun NoteEditorScreen(
                     }
                 },
                 actions = {
+                    if (!state.isNewNote && onRequestDelete != null) {
+                        IconButton(onClick = onRequestDelete, enabled = fieldsEnabled) {
+                            Icon(painterResource(R.drawable.ic_delete_note), stringResource(R.string.delete_note))
+                        }
+                    }
                     TextButton(onClick = onSave, enabled = fieldsEnabled) {
                         Text(stringResource(if (state.isSaving) R.string.saving_note else R.string.save_note))
                     }

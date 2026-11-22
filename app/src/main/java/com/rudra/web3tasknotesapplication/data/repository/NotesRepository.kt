@@ -11,5 +11,9 @@ interface NotesRepository {
     /** Saves a new note when [id] is null, or updates an existing note atomically. */
     suspend fun save(id: Long?, title: String, content: String): Result<Note>
 
-    suspend fun delete(note: Note): Result<Unit>
+    /** Deletes the latest persisted row and returns its snapshot for Undo. */
+    suspend fun delete(id: Long): Result<Note>
+
+    /** Reinserts a deleted note with its original identity and timestamps. */
+    suspend fun restore(note: Note): Result<Unit>
 }

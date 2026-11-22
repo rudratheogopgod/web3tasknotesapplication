@@ -92,6 +92,7 @@ class NoteEditorViewModelTest {
             finishSave.await()
             return Result.success(Note(id ?: 1, title, content, 0, 0))
         }
-        override suspend fun delete(note: Note): Result<Unit> = error("Editor does not delete notes")
+        override suspend fun delete(id: Long): Result<Note> = error("Editor does not delete notes")
+        override suspend fun restore(note: Note): Result<Unit> = error("Undo is not used in this test")
     }
 }

@@ -26,6 +26,7 @@ internal data class Editor(@SerialName(EDITOR_NOTE_ID) val noteId: Long? = null)
 
 internal const val EDITOR_NOTE_ID = "noteId"
 
+private const val EDITOR_DELETE_ID = "editor_delete_id"
 private const val EDITOR_RESULT = "editor_result"
 
 /** Hosts the typed destinations and reports editor results on the home screen. */
@@ -35,6 +36,8 @@ internal fun NotesNavHost() {
     NavHost(navController = navController, startDestination = Home) {
         composable<Home> { entry ->
             val snackbar = remember { SnackbarHostState() }
+            val deleteId by entry.savedStateHandle.getStateFlow<Long?>(EDITOR_DELETE_ID, null)
+                .collectAsStateWithLifecycle()
             val result by entry.savedStateHandle.getStateFlow<String?>(EDITOR_RESULT, null)
                 .collectAsStateWithLifecycle()
             val message = when (result) {
@@ -52,6 +55,8 @@ internal fun NotesNavHost() {
                 onCreateNote = { navController.navigate(Editor()) { launchSingleTop = true } },
                 onOpenNote = { id -> navController.navigate(Editor(id)) { launchSingleTop = true } },
                 snackbarHostState = snackbar,
+                confirmedEditorDeleteId = deleteId,
+                onEditorDeleteConsumed = { entry.savedStateHandle[EDITOR_DELETE_ID] = null },
             )
         }
         composable<Editor> { entry ->
@@ -60,6 +65,11 @@ internal fun NotesNavHost() {
                     if (effect != EditorEffect.CLOSE) {
                         navController.previousBackStackEntry?.savedStateHandle?.set(EDITOR_RESULT, effect.name)
                     }
+                    navController.popBackStack()
+                }
+            }, onDelete = { noteId ->
+                if (navController.currentBackStackEntry == entry) {
+                    navController.previousBackStackEntry?.savedStateHandle?.set(EDITOR_DELETE_ID, noteId)
                     navController.popBackStack()
                 }
             })

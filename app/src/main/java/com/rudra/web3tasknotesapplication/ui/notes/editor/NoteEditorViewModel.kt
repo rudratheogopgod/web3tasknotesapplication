@@ -23,7 +23,7 @@ internal class NoteEditorViewModel @Inject constructor(
     private val savedState: SavedStateHandle,
     private val repository: NotesRepository,
 ) : ViewModel() {
-    private val noteId = savedState.get<Long>(EDITOR_NOTE_ID)
+    val noteId = savedState.get<Long>(EDITOR_NOTE_ID)
     private var originalTitle = ""
     private var originalContent = ""
     private val mutableState = MutableStateFlow(NoteEditorUiState(

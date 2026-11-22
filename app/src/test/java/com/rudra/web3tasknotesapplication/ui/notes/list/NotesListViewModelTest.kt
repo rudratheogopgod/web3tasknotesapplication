@@ -44,12 +44,50 @@ class NotesListViewModelTest {
         viewModel.viewModelScope.cancel()
     }
 
+    @Test
+    fun undoRestoresTheExactSnapshotOnceAndRoomDrivesTheList() = runTest(dispatcher) {
+        val original = Note(9, "Draft", "Original text", 10, 42)
+        val repository = FakeRepository().apply { notes.value = listOf(original) }
+        val model = NotesListViewModel(repository)
+        backgroundScope.launch(dispatcher) { model.uiState.collect {} }
+        testScheduler.runCurrent()
+
+        model.deleteNote(original.id)
+        model.deleteNote(original.id)
+        testScheduler.runCurrent()
+        assertEquals(1, repository.deleteCalls)
+        assertEquals(NotesListUiState.Empty, model.uiState.value)
+        val message = model.deleteMessages.value.single() as DeleteMessage.Deleted
+        assertEquals(original, message.note)
+
+        model.finishDeleteMessage(message, undo = true)
+        model.finishDeleteMessage(message, undo = true)
+        testScheduler.runCurrent()
+        assertEquals(1, repository.restoreCalls)
+        assertEquals(NotesListUiState.Loaded(listOf(original)), model.uiState.value)
+        assertEquals(emptyList<DeleteMessage>(), model.deleteMessages.value)
+        model.viewModelScope.cancel()
+    }
+
     private class FakeRepository : NotesRepository {
         val notes = MutableStateFlow(emptyList<Note>())
+        var deleteCalls = 0
+        var restoreCalls = 0
         override fun observeAll() = notes
         override fun observeById(id: Long) = error("Only list observation is used")
         override suspend fun save(id: Long?, title: String, content: String): Result<Note> =
             error("Only list observation is used")
-        override suspend fun delete(note: Note): Result<Unit> = error("Only list observation is used")
+        override suspend fun delete(id: Long): Result<Note> {
+            deleteCalls++
+            val note = notes.value.first { it.id == id }
+            notes.value = notes.value.filterNot { it.id == id }
+            return Result.success(note)
+        }
+
+        override suspend fun restore(note: Note): Result<Unit> {
+            restoreCalls++
+            notes.value = notes.value + note
+            return Result.success(Unit)
+        }
     }
 }

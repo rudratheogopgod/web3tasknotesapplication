@@ -46,8 +46,17 @@ class NotesRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun delete(note: Note): Result<Unit> = write {
-        check(dao.delete(note.toEntity()) == 1)
+    override suspend fun delete(id: Long): Result<Note> = write {
+        database.withTransaction {
+            val row = checkNotNull(dao.getById(id))
+            check(dao.delete(row) == 1)
+            row.toNote()
+        }
+    }
+
+    override suspend fun restore(note: Note): Result<Unit> = write {
+        dao.insert(note.toEntity())
+        Unit
     }
 
     private suspend fun <T> write(operation: suspend () -> T): Result<T> =

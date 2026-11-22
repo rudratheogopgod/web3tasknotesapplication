@@ -1,6 +1,8 @@
 package com.rudra.web3tasknotesapplication.ui.notes.editor
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -22,7 +24,7 @@ class NoteEditorFlowTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun createsAndEditsThroughNavigation() {
+    fun createsEditsDeletesAndUndoesThroughNavigation() {
         val title = "Editor test ${UUID.randomUUID()}"
         val context = compose.activity.applicationContext
         try {
@@ -35,6 +37,19 @@ class NoteEditorFlowTest {
             awaitText("Start typing…")
             compose.onNodeWithText("Start typing…").performTextInput("Edited on device")
             compose.onNodeWithText("Save").performClick()
+            awaitText("Edited on device")
+
+            compose.onNodeWithText(title).performSemanticsAction(SemanticsActions.OnLongClick)
+            compose.onNodeWithText("Delete").performClick()
+            awaitText("Delete note?")
+            compose.onNodeWithText("Cancel").performClick()
+
+            compose.onNodeWithText(title).performClick()
+            compose.onNodeWithContentDescription("Delete").performClick()
+            awaitText("Delete note?")
+            compose.onNodeWithText("Delete").performClick()
+            awaitText("Note deleted")
+            compose.onNodeWithText("Undo").performClick()
             awaitText("Edited on device")
         } finally {
             val database = Room.databaseBuilder(context, NotesDatabase::class.java, "notes.db").build()

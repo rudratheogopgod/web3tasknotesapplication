@@ -28,6 +28,7 @@ internal fun NotesListScreen(
     onCreateNote: () -> Unit,
     onOpenNote: (Long) -> Unit,
     snackbarHostState: SnackbarHostState? = null,
+    onRequestDelete: ((Long) -> Unit)? = null,
 ) {
     val insets = WindowInsets.safeDrawing.union(WindowInsets.captionBar)
     Scaffold(
@@ -56,7 +57,7 @@ internal fun NotesListScreen(
                 shape = NotesShapes.Sheet,
                 color = MaterialTheme.colorScheme.surface,
             ) {
-                NotesListContent(state, onCreateNote, onOpenNote)
+                NotesListContent(state, onCreateNote, onOpenNote, onRequestDelete)
             }
         }
     }
@@ -67,6 +68,7 @@ private fun NotesListContent(
     state: NotesListUiState,
     onCreateNote: () -> Unit,
     onOpenNote: (Long) -> Unit,
+    onRequestDelete: ((Long) -> Unit)?,
 ) {
     when (state) {
         NotesListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -86,7 +88,8 @@ private fun NotesListContent(
             verticalItemSpacing = Spacing.Medium,
         ) {
             items(state.notes, key = { it.id }) { note ->
-                NoteCard(note = note, onClick = { onOpenNote(note.id) })
+                NoteCard(note = note, onClick = { onOpenNote(note.id) },
+                    onDelete = onRequestDelete?.let { request -> { request(note.id) } })
             }
         }
     }
